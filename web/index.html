@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Evidence-grounded fitness misinformation analysis">
+  <title>RAG–Rumor Smasher</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="RAG Rumor Smasher home">
+      <span class="brand-mark">RS</span>
+      <span>RAG–RUMOR SMASHER</span>
+    </a>
+    <div class="system-status">
+      <span class="pulse"></span>
+      <span id="systemStatus">Loading evidence engine…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">FITNESS CLAIM INTELLIGENCE / 2026</p>
+        <h1>Strong claims.<br><em>Stronger evidence.</em></h1>
+        <p class="lede">A retrieval-augmented prototype that matches viral fitness advice to related synthetic rebuttal records.</p>
+      </div>
+      <aside class="hero-stat" aria-label="System corpus size">
+        <span class="stat-number">2,700</span>
+        <span class="stat-label">indexed evidence records</span>
+        <span class="stat-note">+ 300 held out for evaluation</span>
+      </aside>
+    </section>
+
+    <section class="analyzer" aria-labelledby="analyzerHeading">
+      <div class="section-number">01 / ANALYZE</div>
+      <div class="analyzer-grid">
+        <div>
+          <h2 id="analyzerHeading">Paste a suspicious fitness claim</h2>
+          <p class="field-help">Try a “miracle” fat-loss trick, training absolute, or supplement promise.</p>
+        </div>
+        <form id="claimForm">
+          <label class="sr-only" for="claimInput">Fitness claim</label>
+          <textarea id="claimInput" maxlength="1000" required>Stop eating carbohydrates after 6 PM and wear a sweat suit during cardio—you will burn belly fat twice as fast in one week.</textarea>
+          <div class="form-footer">
+            <div class="examples" aria-label="Example claims">
+              <button type="button" class="example-chip" data-claim="Deep squats always destroy your knees, so your knees must never pass your toes.">Knee myth</button>
+              <button type="button" class="example-chip" data-claim="Women should avoid heavy weights because lifting makes them bulky almost immediately.">Women + weights</button>
+              <button type="button" class="example-chip" data-claim="BCAA supplements are essential after every workout or your muscles will become catabolic.">BCAA claim</button>
+            </div>
+            <button class="analyze-button" id="analyzeButton" type="submit">
+              <span>Run evidence check</span>
+              <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section id="loadingPanel" class="loading-panel" hidden aria-live="polite">
+      <div class="scan-line"></div>
+      <p>Embedding claim · searching ChromaDB · routing expert</p>
+    </section>
+
+    <section id="resultPanel" class="results" hidden aria-live="polite">
+      <div class="section-number">02 / VERDICT</div>
+      <div class="verdict-grid">
+        <article class="verdict-card">
+          <div class="verdict-topline">
+            <span id="verdictBadge" class="verdict-badge">SYNTHETIC CORPUS</span>
+            <span id="riskBadge" class="risk-badge">HIGH RISK</span>
+          </div>
+          <h2 id="resultVerdict">Related synthetic rebuttal retrieved</h2>
+          <p id="resultSummary" class="result-summary"></p>
+          <div class="reasoning">
+            <span>WHY THIS OUTPUT</span>
+            <p id="resultReasoning"></p>
+          </div>
+        </article>
+        <aside class="route-card">
+          <span class="route-label">ROUTED TO</span>
+          <div class="expert-icon" aria-hidden="true">EX</div>
+          <h3 id="expertLabel">Exercise Physiology</h3>
+          <p>Selected from the expert labels of the top retrieved records.</p>
+          <span id="modeBadge" class="mode-badge">EXTRACTIVE MODE</span>
+        </aside>
+      </div>
+
+      <div class="evidence-heading">
+        <div>
+          <div class="section-number">03 / RETRIEVED EVIDENCE</div>
+          <h2>Inspect the retrieved synthetic records</h2>
+        </div>
+        <p>Similarity is cosine similarity in the 512-dimensional BGE embedding space.</p>
+      </div>
+      <div id="evidenceList" class="evidence-list"></div>
+      <p class="provenance-note">Evidence records in this prototype are synthetically generated and are not a substitute for clinical guidance.</p>
+    </section>
+
+    <section class="method">
+      <div class="section-number">04 / MEASURED SYSTEM</div>
+      <div class="method-title">
+        <h2>Nothing hidden behind the interface.</h2>
+        <p>The website and report read from the same configuration and evaluation artifact.</p>
+      </div>
+      <div class="pipeline" aria-label="RAG processing pipeline">
+        <div class="pipeline-step"><span>1</span><strong>Claim</strong><small>Raw social text</small></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><span>2</span><strong>BGE-small</strong><small>512-d embedding</small></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><span>3</span><strong>ChromaDB</strong><small>Cosine top-k = 3</small></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><span>4</span><strong>Expert route</strong><small>Evidence metadata</small></div>
+        <div class="pipeline-arrow">→</div>
+        <div class="pipeline-step"><span>5</span><strong>Verdict</strong><small>Grounded response</small></div>
+      </div>
+      <div class="metrics-grid">
+        <article>
+          <span id="hitRate" class="metric-value">—</span>
+          <span class="metric-name">Dense topic-pair hit@3</span>
+        </article>
+        <article>
+          <span id="baselineRate" class="metric-value">—</span>
+          <span class="metric-name">TF–IDF topic-pair hit@3</span>
+        </article>
+        <article>
+          <span id="expertRate" class="metric-value">—</span>
+          <span class="metric-name">Dense expert hit@3</span>
+        </article>
+        <article>
+          <span class="metric-value">300</span>
+          <span class="metric-name">Held-out test claims</span>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>RAG–RUMOR SMASHER</span>
+    <span>Coursework prototype · transparent synthetic-data disclosure</span>
+  </footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

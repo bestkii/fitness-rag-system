@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local environments and secrets
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+API-key.txt
+*api-key*.txt
+
+# Rebuildable vector stores and model caches
+fitness_vector_db*/
+.cache/
+
+# Coursework/private/large artifacts intentionally excluded
+*.pdf
+*.mp4
+*.mov
+*.zip
+Lin_Yuxuan_*/
+paper_rewriting_output/
+.ipynb_checkpoints/
+
+# Local editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,23 @@
+{
+  "status": "deprecated_after_leakage_audit",
+  "reason": "One normalized rumor appeared once in training and once in the held-out set.",
+  "dataset_records": 3000,
+  "indexed_train_records": 2700,
+  "held_out_test_records": 300,
+  "random_seed": 20260627,
+  "dense_rag": {
+    "topic_pair_precision_at_3": 0.6278,
+    "topic_pair_hit_rate_at_3": 0.84,
+    "mean_reciprocal_rank": 0.7417,
+    "expert_hit_rate_at_3": 0.85,
+    "ndcg_at_3": 0.6363
+  },
+  "lexical_tfidf_baseline": {
+    "topic_pair_precision_at_3": 0.5867,
+    "topic_pair_hit_rate_at_3": 0.81,
+    "mean_reciprocal_rank": 0.6989,
+    "expert_hit_rate_at_3": 0.82,
+    "ndcg_at_3": 0.5929
+  },
+  "usage": "Preserved only for audit history. Do not cite these values as the final benchmark."
+}

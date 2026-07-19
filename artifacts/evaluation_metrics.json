@@ -1,0 +1,71 @@
+{
+  "evaluation_design": {
+    "dataset_records": 3000,
+    "indexed_train_records": 2700,
+    "held_out_test_records": 300,
+    "split": "deterministic stratified split by unordered topic pair",
+    "split_version": 2,
+    "random_seed": 20260627,
+    "records_sha256": "0766e6b80697594f605ef307ef9cb9ec72f127c2a9e004bc358b2a0d763afacc",
+    "leakage_checks": {
+      "train_count": 2700,
+      "test_count": 300,
+      "index_overlap_count": 0,
+      "covered_record_count": 3000,
+      "normalized_rumor_overlap_count": 0
+    },
+    "test_leakage": "test indices are excluded from Chroma; normalized rumor text does not cross the train/test boundary",
+    "relevance_definition": "retrieved record has the same unordered topic pair",
+    "caveat": "labels and text are synthetic; metrics measure retrieval, not clinical validity"
+  },
+  "implementation": {
+    "embedding_model": "BAAI/bge-small-zh-v1.5",
+    "embedding_dimension": 512,
+    "vector_store": "ChromaDB",
+    "distance": "cosine",
+    "top_k": 3,
+    "collection_records": 2700,
+    "library_versions": {
+      "chromadb": "1.5.9",
+      "sentence_transformers": "5.5.1",
+      "scikit_learn": "1.9.0",
+      "numpy": "2.4.6"
+    }
+  },
+  "dense_rag": {
+    "topic_pair_precision_at_3": 0.6256,
+    "topic_pair_recall_at_3": 0.0458,
+    "topic_pair_hit_rate_at_3": 0.8367,
+    "mean_reciprocal_rank": 0.7383,
+    "expert_hit_rate_at_3": 0.85,
+    "ndcg_at_3": 0.6337
+  },
+  "lexical_tfidf_baseline": {
+    "topic_pair_precision_at_3": 0.5833,
+    "topic_pair_recall_at_3": 0.0424,
+    "topic_pair_hit_rate_at_3": 0.8067,
+    "mean_reciprocal_rank": 0.6939,
+    "expert_hit_rate_at_3": 0.82,
+    "ndcg_at_3": 0.589
+  },
+  "dataset_profile": {
+    "topic_pairs": 66,
+    "experts": {
+      "exercise_physiology": 1050,
+      "corrective_exercise": 613,
+      "clinical_nutrition": 841,
+      "sports_medicine": 293,
+      "sports_biomechanics": 199,
+      "sports_nutrition": 3,
+      "media_discourse": 1
+    }
+  },
+  "absolute_gain": {
+    "topic_pair_precision_at_3": 0.0423,
+    "topic_pair_recall_at_3": 0.0034,
+    "topic_pair_hit_rate_at_3": 0.03,
+    "mean_reciprocal_rank": 0.0444,
+    "expert_hit_rate_at_3": 0.03,
+    "ndcg_at_3": 0.0447
+  }
+}
