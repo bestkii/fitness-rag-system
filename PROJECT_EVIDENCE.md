@@ -4,12 +4,26 @@ This file maps portfolio claims to reproducible public evidence.
 
 ## Implemented system
 
+- Two-query academic research plan with free PubMed and Crossref APIs
+- URL deduplication, topic-concept relevance checks, and explicit
+  authoritative/academic/general source tiers
+- Read-only, visible-browser Xiaohongshu trend collection with local persistence,
+  hard result/scroll caps, and stop-on-verification behavior
+- Local trend API and dashboard that keep popularity signals separate from evidence
+- Source-linked Chinese Xiaohongshu draft plus five-card carousel script
+- Persistent draft-to-approved transition with source-review acknowledgement
+- Text-pack export with no automatic publication
 - FastAPI application: `app.py`
 - Retrieval and optional generation service: `fitness_rag/service.py`
 - Deterministic, leakage-audited split: `fitness_rag/data.py`
 - Chroma knowledge-base builder: `scripts/build_knowledge_base.py`
 - Dense-versus-TF-IDF evaluation: `scripts/evaluate_retrieval.py`
 - Automated checks: `tests/test_system.py`
+- Local-only RapidOCR textbook pipeline with page-type gates and page citations
+- Separate 126-chunk staging index for selected dietary-guideline and NSCA sections
+- Local textbook search API using the pilot's measured-better character TF-IDF retriever
+- Local source-page review queue with persistent approve/exclude decisions
+- Separate approved-index builder that refuses to run with zero human approvals
 
 Configuration:
 
@@ -49,6 +63,29 @@ queries. The weakest topic-pair groups included `big_lifts|nutrition_tracking`
 (1/4). The run is deterministic for the fixed split; confidence intervals and
 variance across alternate splits were not measured.
 
+## Private textbook staging pilot
+
+Two legally held PDFs were processed locally. Original PDFs, OCR text, vector
+data, and detailed reports are ignored under `runtime/private_corpus/`; no book
+text is sent to the web-research or cloud-content workflow. The first selection
+covers printed pages 3-46 of the Chinese Dietary Guidelines (2022) and printed
+pages 471-500 of NSCA-CSCS 4th edition. Quality gates staged 58 of 74 pages and
+excluded 16 table-heavy or structurally unsuitable pages, producing 126 chunks.
+
+An 11-query, table-of-contents-derived development pilot compared the existing
+dense embedding with character TF-IDF at top 3. Dense page-range Hit@3 was
+`81.82%`; TF-IDF was `100.00%`. Dense MRR was `0.7727`; TF-IDF was `0.9091`.
+The local demo therefore defaults to TF-IDF for this staging corpus. These are
+development-set retrieval-location metrics, not a held-out benchmark and not a
+measure of OCR correctness, answer quality, or medical validity. Future changes
+require a new held-out query set.
+
+The staging corpus is not the formal RAG knowledge base. A reviewer must compare
+each candidate with its locally rendered source page and explicitly approve or
+exclude it. Only approved chunks can enter the separate approved index; the
+current review count is reported by the local application rather than inferred
+from the OCR pipeline.
+
 ## Reproduction commands
 
 ```powershell
@@ -65,3 +102,11 @@ measure clinical validity, medical safety, or generated-answer correctness.
 Offline mode returns a related synthetic rebuttal rather than asserting that a
 user claim has been medically disproved. DeepSeek answer generation is optional
 and was not used for the reported retrieval benchmark.
+
+The content workflow does not change the fixed split, embedding configuration,
+vector store, or stored retrieval metrics. Academic search quality,
+generated-content correctness, latency, and social-media performance are not yet
+benchmarked. Abstracts and metadata must be checked against their original pages
+before a draft is approved. The Xiaohongshu collector depends on changeable
+public-page DOM and has not been load-tested. The application does not publish to
+Xiaohongshu automatically.

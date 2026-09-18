@@ -1,0 +1,13 @@
+[
+  {"id": "diet-01", "query": "怎样理解食物多样和合理搭配？", "source_id": "dietary_guidelines_rules_1_2", "printed_page_start": 3, "printed_page_end": 26},
+  {"id": "diet-02", "query": "谷物、蔬菜水果、奶豆和鱼禽肉蛋应该怎样组合？", "source_id": "dietary_guidelines_rules_1_2", "printed_page_start": 3, "printed_page_end": 26},
+  {"id": "diet-03", "query": "怎样通过吃动平衡保持健康体重？", "source_id": "dietary_guidelines_rules_1_2", "printed_page_start": 27, "printed_page_end": 46},
+  {"id": "diet-04", "query": "成年人应该怎样安排身体活动并减少久坐？", "source_id": "dietary_guidelines_rules_1_2", "printed_page_start": 27, "printed_page_end": 46},
+  {"id": "nsca-01", "query": "设计抗阻训练计划前如何进行需求分析？", "source_id": "nsca_cscs_ch17", "printed_page_start": 472, "printed_page_end": 474},
+  {"id": "nsca-02", "query": "抗阻训练计划应该怎样选择练习动作？", "source_id": "nsca_cscs_ch17", "printed_page_start": 475, "printed_page_end": 478},
+  {"id": "nsca-03", "query": "如何确定抗阻训练频率？", "source_id": "nsca_cscs_ch17", "printed_page_start": 479, "printed_page_end": 480},
+  {"id": "nsca-04", "query": "抗阻训练中的练习顺序怎样安排？", "source_id": "nsca_cscs_ch17", "printed_page_start": 481, "printed_page_end": 482},
+  {"id": "nsca-05", "query": "训练目标不同，负荷与重复次数应该如何选择？", "source_id": "nsca_cscs_ch17", "printed_page_start": 483, "printed_page_end": 495},
+  {"id": "nsca-06", "query": "抗阻训练量应该怎样计算和安排？", "source_id": "nsca_cscs_ch17", "printed_page_start": 496, "printed_page_end": 498},
+  {"id": "nsca-07", "query": "抗阻训练组间休息时间如何确定？", "source_id": "nsca_cscs_ch17", "printed_page_start": 499, "printed_page_end": 500}
+]

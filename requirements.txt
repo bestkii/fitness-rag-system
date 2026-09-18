@@ -3,6 +3,7 @@ chromadb==1.5.9
 fastapi==0.138.1
 numpy==2.4.6
 openai==2.41.1
+playwright==1.63.0
 scikit-learn==1.9.0
 sentence-transformers==5.5.1
 tenacity==9.1.4

@@ -19,6 +19,7 @@ API-key.txt
 # Rebuildable vector stores and model caches
 fitness_vector_db*/
 .cache/
+runtime/
 
 # Coursework/private/large artifacts intentionally excluded
 *.pdf

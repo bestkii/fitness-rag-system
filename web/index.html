@@ -3,15 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Evidence-grounded fitness misinformation analysis">
-  <title>RAG–Rumor Smasher</title>
+  <meta name="description" content="Evidence-grounded fitness research and Xiaohongshu draft studio">
+  <title>Evidence Studio · Fitness RAG Agent</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="/" aria-label="RAG Rumor Smasher home">
+    <a class="brand" href="/" aria-label="Fitness Evidence Studio home">
       <span class="brand-mark">RS</span>
-      <span>RAG–RUMOR SMASHER</span>
+      <span>FITNESS EVIDENCE STUDIO</span>
     </a>
     <div class="system-status">
       <span class="pulse"></span>
@@ -22,9 +23,9 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <p class="eyebrow">FITNESS CLAIM INTELLIGENCE / 2026</p>
-        <h1>Strong claims.<br><em>Stronger evidence.</em></h1>
-        <p class="lede">A retrieval-augmented prototype that matches viral fitness advice to related synthetic rebuttal records.</p>
+        <p class="eyebrow">RESEARCH AGENT + RAG + HUMAN REVIEW / 2026</p>
+        <h1>Research first.<br><em>Publish carefully.</em></h1>
+        <p class="lede">Turn a fitness topic into a source-linked Xiaohongshu draft while keeping research, synthetic RAG context, and human approval visibly separate.</p>
       </div>
       <aside class="hero-stat" aria-label="System corpus size">
         <span class="stat-number">2,700</span>
@@ -33,8 +34,121 @@
       </aside>
     </section>
 
+    <section class="trend-radar" aria-labelledby="trendHeading">
+      <div class="section-number">00 / LOCAL XIAOHONGSHU TREND RADAR</div>
+      <div class="trend-grid">
+        <div>
+          <h2 id="trendHeading">Separate popularity from evidence.</h2>
+          <p class="field-help">This panel reads only the public search cards you collected locally. It helps choose a topic; PubMed and Crossref support the factual claims.</p>
+        </div>
+        <form id="trendForm" class="trend-form">
+          <label for="trendKeyword">Collected keyword</label>
+          <div class="trend-controls">
+            <input id="trendKeyword" maxlength="100" value="首页健身筛选" required>
+            <button type="submit">Load local trends</button>
+          </div>
+          <p id="trendHint">Collection is launched manually and stops on login or risk-control checks.</p>
+        </form>
+      </div>
+      <div id="trendResults" class="trend-results" hidden></div>
+    </section>
+
+    <section class="private-library" aria-labelledby="libraryHeading">
+      <div class="section-number">01 / LOCAL TEXTBOOK RETRIEVAL</div>
+      <div class="library-grid">
+        <div>
+          <h2 id="libraryHeading">Ask the books. Keep the books local.</h2>
+          <p class="field-help">Searches the staged dietary-guideline and NSCA sections on this computer. Results retain printed-page citations and are never sent to the web research or cloud content model.</p>
+        </div>
+        <form id="libraryForm" class="library-form">
+          <label for="libraryQuery">Training or nutrition question</label>
+          <div class="library-controls">
+            <input id="libraryQuery" maxlength="300" value="抗阻训练组间休息时间如何安排？" required>
+            <button type="submit">Search local books</button>
+          </div>
+          <p>Staging corpus · OCR and page order still require human verification.</p>
+          <div class="review-toolbar">
+            <button type="button" id="loadReviewQueue">Load 12-item review queue</button>
+            <span id="reviewSummary">0 reviewed · 126 pending</span>
+          </div>
+        </form>
+      </div>
+      <div id="libraryResults" class="library-results" hidden></div>
+    </section>
+
+    <section class="creator" aria-labelledby="creatorHeading">
+      <div class="section-number">02 / CREATE A SOURCED DRAFT</div>
+      <div class="creator-grid">
+        <div>
+          <h2 id="creatorHeading">From a topic to a reviewable content pack.</h2>
+          <p class="field-help">The agent plans two searches, ranks sources, drafts five carousel cards, and stops before publishing.</p>
+        </div>
+        <form id="draftForm" class="draft-form">
+          <label for="topicInput">Topic or question</label>
+          <textarea id="topicInput" maxlength="300" required>空腹有氧真的比普通有氧更减脂吗？</textarea>
+          <div class="draft-options">
+            <label>Audience
+              <select id="audienceInput">
+                <option>健身初学者</option>
+                <option>有训练经验的普通用户</option>
+                <option>关注减脂的年轻人</option>
+              </select>
+            </label>
+            <label>Tone
+              <select id="toneInput">
+                <option>清晰、克制、友好</option>
+                <option>轻松但不夸张</option>
+                <option>专业、简洁</option>
+              </select>
+            </label>
+          </div>
+          <button class="analyze-button" id="draftButton" type="submit">
+            <span>Research + create draft</span><span aria-hidden="true">↗</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section id="draftLoading" class="loading-panel" hidden aria-live="polite">
+      <div class="scan-line"></div>
+      <p>Planning searches · ranking sources · drafting · checking citations</p>
+    </section>
+
+    <section id="draftPanel" class="draft-panel" hidden aria-live="polite">
+      <div class="draft-heading">
+        <div>
+          <div class="section-number">03 / REVIEW GATE</div>
+          <h2 id="draftTitle"></h2>
+        </div>
+        <span id="draftStatus" class="status-chip">DRAFT</span>
+      </div>
+      <div class="draft-layout">
+        <article class="post-preview">
+          <pre id="draftBody"></pre>
+          <div id="draftHashtags" class="hashtags"></div>
+        </article>
+        <aside class="review-card">
+          <h3>Human review required</h3>
+          <ul id="reviewFlags"></ul>
+          <label class="approval-check">
+            <input type="checkbox" id="sourceAcknowledgement">
+            I opened and checked the original sources.
+          </label>
+          <button type="button" id="approveButton" class="review-button">Approve draft</button>
+          <a id="exportLink" class="export-link disabled" href="#">Export text pack</a>
+        </aside>
+      </div>
+      <h3 class="subheading">Five-card carousel script</h3>
+      <div id="carouselCards" class="carousel-cards"></div>
+      <div class="source-heading">
+        <h3>Academic sources</h3>
+        <p>PubMed abstracts and Crossref metadata are research leads, not substitutes for opening the original papers.</p>
+      </div>
+      <div id="sourceList" class="source-list"></div>
+    </section>
+
     <section class="analyzer" aria-labelledby="analyzerHeading">
-      <div class="section-number">01 / ANALYZE</div>
+      <div class="section-number">04 / LEGACY RAG ANALYZER</div>
       <div class="analyzer-grid">
         <div>
           <h2 id="analyzerHeading">Paste a suspicious fitness claim</h2>
@@ -64,7 +178,7 @@
     </section>
 
     <section id="resultPanel" class="results" hidden aria-live="polite">
-      <div class="section-number">02 / VERDICT</div>
+      <div class="section-number">04 / VERDICT</div>
       <div class="verdict-grid">
         <article class="verdict-card">
           <div class="verdict-topline">
@@ -89,7 +203,7 @@
 
       <div class="evidence-heading">
         <div>
-          <div class="section-number">03 / RETRIEVED EVIDENCE</div>
+          <div class="section-number">05 / RETRIEVED SYNTHETIC CONTEXT</div>
           <h2>Inspect the retrieved synthetic records</h2>
         </div>
         <p>Similarity is cosine similarity in the 512-dimensional BGE embedding space.</p>
@@ -99,7 +213,7 @@
     </section>
 
     <section class="method">
-      <div class="section-number">04 / MEASURED SYSTEM</div>
+      <div class="section-number">06 / MEASURED LEGACY SYSTEM</div>
       <div class="method-title">
         <h2>Nothing hidden behind the interface.</h2>
         <p>The website and report read from the same configuration and evaluation artifact.</p>
@@ -137,8 +251,8 @@
   </main>
 
   <footer>
-    <span>RAG–RUMOR SMASHER</span>
-    <span>Coursework prototype · transparent synthetic-data disclosure</span>
+    <span>FITNESS EVIDENCE STUDIO</span>
+    <span>Research draft prototype · human approval required · no auto-publishing</span>
   </footer>
   <script src="/static/app.js"></script>
 </body>
