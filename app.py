@@ -7,8 +7,9 @@ from typing import Literal
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
+from fitness_rag.community import load_community_questions
 from fitness_rag.config import APP_NAME, DRAFTS_DIR, ROOT
 from fitness_rag.content import ContentAgent
 from fitness_rag.drafts import DraftNotApprovedError, DraftNotFoundError, DraftStore
@@ -59,8 +60,17 @@ class ClaimRequest(BaseModel):
 
 class DraftRequest(BaseModel):
     topic: str = Field(min_length=4, max_length=300)
-    audience: str = Field(default="健身初学者", min_length=2, max_length=120)
-    tone: str = Field(default="清晰、克制、友好", min_length=2, max_length=120)
+    audience: str | None = Field(default=None, min_length=2, max_length=120)
+    tone: str | None = Field(default=None, min_length=2, max_length=120)
+    language: Literal["en", "zh"] = "zh"
+    community_source_url: HttpUrl | None = None
+
+    @field_validator("community_source_url")
+    @classmethod
+    def validate_community_source_url(cls, url: HttpUrl | None) -> HttpUrl | None:
+        if url is not None and (url.scheme != "https" or url.username is not None):
+            raise ValueError("Community source must be an HTTPS URL without credentials.")
+        return url
 
 
 class ApprovalRequest(BaseModel):
@@ -74,8 +84,19 @@ class PrivateReviewRequest(BaseModel):
 
 
 @app.get("/")
-def home() -> FileResponse:
+@app.get("/en")
+def home_english() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index-en.html")
+
+
+@app.get("/zh")
+def home_chinese() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/api/community/questions")
+async def community_questions() -> dict:
+    return await load_community_questions()
 
 
 @app.get("/api/health")
@@ -212,6 +233,10 @@ def create_content_draft(request: DraftRequest) -> dict:
             request.topic,
             audience=request.audience,
             tone=request.tone,
+            language=request.language,
+            community_source_url=(
+                str(request.community_source_url) if request.community_source_url else None
+            ),
         )
     except (ResearchError, ValueError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

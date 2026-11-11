@@ -1,21 +1,28 @@
 # Fitness Evidence Studio
 
-A portfolio-oriented research and drafting agent built on the original reproducible
-Fitness RAG prototype. It turns a fitness topic into a source-linked Xiaohongshu
-draft, five-card carousel script, review checklist, and exportable content pack.
-It deliberately stops before publication.
+A research and drafting workbench built on the original Fitness RAG prototype.
+The default English workspace turns a fitness question into a source-linked draft,
+five-card carousel script, review checklist, and exportable text pack. The Chinese
+workspace retains the local textbook and Xiaohongshu workflows.
 
 > This is a coursework prototype built from synthetic model-generated text. It is
 > not a medical fact-checker and must not be used for health decisions.
 
 ## Agent workflow
 
+Open `/` or `/en` for the English workbench and `/zh` for the Chinese workspace.
+**Community Questions** loads public posts from the Mastodon fitness and strength
+training hashtag timelines when opened or refreshed. English-language posts with
+question marks appear as possible topics. Open the original post and enter your
+own question. The original link is stored with the draft as topic provenance.
+The workbench uses academic search for citations.
+
 ```text
-topic -> two planned PubMed/Crossref searches -> deduplicate + topic relevance
+editorial question -> two planned PubMed/Crossref searches -> deduplicate + topic relevance
       -> source-tier ranking
-      -> research packet -> optional legacy RAG orientation context
+      -> research packet
       -> template or LLM draft -> citation checks -> human review
-      -> approval -> text export (no automatic posting)
+      -> approval -> text export
 ```
 
 The research path uses the free PubMed E-utilities and Crossref REST API by
@@ -169,7 +176,8 @@ $env:DEEPSEEK_API_KEY = "your-own-key"
 Do not paste keys into source files or browser JavaScript. With the server running,
 open the homepage and use **Create a sourced draft**. The API endpoints are:
 
-- `POST /api/content/drafts`: research and create a draft
+- `GET /api/community/questions`: load possible community topics and report unavailable feeds
+- `POST /api/content/drafts`: create a draft with `language` (`en` or `zh`) and optional HTTPS `community_source_url`. Requests without a language use the legacy Chinese default.
 - `GET /api/content/drafts/{id}`: inspect a persisted draft
 - `POST /api/content/drafts/{id}/approve`: acknowledge source review
 - `GET /api/content/drafts/{id}/export`: export the text pack

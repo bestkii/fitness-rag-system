@@ -60,12 +60,32 @@ class ResearchServiceTests(unittest.TestCase):
         self.assertTrue(all("fasted" in query for query in queries))
         self.assertNotIn("nutrition evidence", " ".join(queries))
 
+    def test_english_fasted_cardio_uses_the_same_specific_queries(self):
+        chinese_queries = ResearchService.plan_queries("空腹有氧真的更减脂吗？")
+        english_queries = ResearchService.plan_queries(
+            "Does fasted cardio lead to more fat loss than fed cardio?"
+        )
+
+        self.assertEqual(english_queries, chinese_queries)
+
     def test_fasted_cardio_requires_fasting_and_exercise_concepts(self):
         packet = ResearchService(FakeSearchProvider()).research("空腹有氧是否更减脂")
 
         relevant = packet.sources[0]
         self.assertTrue(
             _matches_required_concepts(relevant, "空腹有氧是否更减脂")
+        )
+
+    def test_english_fasted_cardio_requires_the_same_concepts(self):
+        packet = ResearchService(FakeSearchProvider()).research(
+            "Does fasted cardio lead to more fat loss than fed cardio?"
+        )
+
+        self.assertTrue(
+            _matches_required_concepts(
+                packet.sources[0],
+                "Does fasted cardio lead to more fat loss than fed cardio?",
+            )
         )
 
 
