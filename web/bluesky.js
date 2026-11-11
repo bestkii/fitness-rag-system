@@ -15,7 +15,79 @@ const renderBlueskyDraft = (() => {
   const status = document.querySelector("#blueskyStatus");
   const button = document.querySelector("#blueskyPublish");
   const permalink = document.querySelector("#blueskyPermalink");
+  const readMore = document.querySelector("#blueskyReadMore");
+  const explanationFields = document.querySelector("#blueskyExplanationFields");
+  const addExplanation = document.querySelector("#addBlueskyExplanation");
+  const explanationPreview = document.querySelector("#blueskyExplanationPreview");
+  const explanationPosts = document.querySelector("#blueskyExplanationPosts");
   let active = null;
+
+  function appendExplanation(item = {}) {
+    const field = document.createElement("fieldset");
+    const legend = document.createElement("legend");
+    legend.textContent = "Explanation reply";
+    const text = document.createElement("textarea");
+    text.rows = 3;
+    text.maxLength = 300;
+    text.setAttribute("aria-label", "Explanation text");
+    text.value = item.text || "";
+    const source = document.createElement("select");
+    source.setAttribute("aria-label", "Explanation source");
+    active.sources.forEach((entry, index) => {
+      if (!entry.url.startsWith("https://")) return;
+      const option = document.createElement("option");
+      option.value = index + 1;
+      option.textContent = `[S${index + 1}] ${entry.title}`;
+      source.append(option);
+    });
+    if (item.sources?.length) source.value = String(item.sources[0]);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove reply";
+    remove.addEventListener("click", () => {
+      field.remove();
+      renderPreview();
+    });
+    field.append(legend, text, source, remove);
+    explanationFields.append(field);
+  }
+
+  function explanationItems() {
+    if (!readMore.checked) return [];
+    return Array.from(explanationFields.children, (field) => ({
+      text: field.querySelector("textarea").value.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, ""),
+      sources: field.querySelector("select").value ? [Number(field.querySelector("select").value)] : [],
+    }));
+  }
+
+  function renderExplanations(publication, items) {
+    const stored = publication?.replies;
+    const rows = publication?.state !== "ready" ? stored || [] : items;
+    explanationPreview.hidden = rows.length === 0;
+    explanationPosts.replaceChildren();
+    let valid = !readMore.checked || items.length > 0;
+    rows.forEach((item) => {
+      const text = item.record?.text ?? (item.text + `\n\nSources: ${item.sources.map((index) => `[S${index}]`).join(" ")}`);
+      const count = Array.from(text).length;
+      const row = document.createElement("li");
+      const pre = document.createElement("pre");
+      pre.textContent = text;
+      const feedback = document.createElement("p");
+      feedback.textContent = `${count} / 300 characters`;
+      row.append(pre, feedback);
+      if (item.permalink) {
+        const link = document.createElement("a");
+        link.href = item.permalink;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = "Open explanation reply";
+        row.append(link);
+      }
+      explanationPosts.append(row);
+      if (!item.record && (!item.text || !item.sources.length || count > 300)) valid = false;
+    });
+    return valid;
+  }
 
   function selectedSources() {
     return Array.from(sources.querySelectorAll("input:checked"), (source) => Number(source.value));
@@ -44,8 +116,12 @@ const renderBlueskyDraft = (() => {
     const { publication, submitting } = active;
     const state = publication?.state;
     const selected = selectedSources();
+    const explanations = explanationItems();
+    const explanationsValid = renderExplanations(publication, explanations);
+    active.explanations = explanations;
     const suffix = selected.length ? `\n\nSources: ${selected.map((index) => `[S${index}]`).join(" ")}` : "";
-    const text = publication?.record?.text ?? (postText() ? postText() + suffix : "");
+    const readMoreLabel = readMore.checked && explanations.length ? "\nRead more ↓" : "";
+    const text = publication?.record?.text ?? (postText() ? postText() + suffix + readMoreLabel : "");
     const length = Array.from(text).length;
     const account = publication?.configured_account;
     const accountMatches = state !== "pending" || publication.account === account;
@@ -74,21 +150,31 @@ const renderBlueskyDraft = (() => {
     sources.disabled = submitting;
     myth.disabled = submitting;
     clarification.disabled = submitting;
+    readMore.disabled = submitting;
+    explanationFields.querySelectorAll("textarea, select, button").forEach((item) => {
+      item.disabled = submitting || !readMore.checked;
+    });
+    addExplanation.disabled = submitting || !readMore.checked || explanationFields.children.length >= 5;
     button.hidden = state === "published";
     button.textContent = state === "pending" ? "Retry the reviewed post" : "Publish with image";
     button.disabled = submitting || !account || !accountMatches || length > 300
-      || (state !== "pending" && (!postText() || !selected.length || !card));
+      || (state !== "pending" && (!postText() || !selected.length || !card || !explanationsValid));
     permalink.hidden = state !== "published";
     if (state === "published") permalink.href = publication.permalink;
     else permalink.removeAttribute("href");
 
     if (submitting) status.textContent = "Checking or publishing the reviewed post…";
     else if (state === "published") status.textContent = `Published as @${publication.account}.`;
+    else if (state === "pending" && publication.permalink) {
+      status.textContent = "The myth post is published. Retry will finish the saved explanation thread.";
+    }
     else if (active.error) status.textContent = active.error;
     else if (!publication) status.textContent = "Checking publishing availability…";
     else if (!account) status.textContent = "Set BLUESKY_HANDLE and BLUESKY_APP_PASSWORD in the local server environment to publish.";
     else if (!accountMatches) status.textContent = `Restore @${publication.account} to retry this post.`;
-    else if (state === "pending") status.textContent = `Bluesky has yet to confirm the post for @${account}. Retry will check the same record.`;
+    else if (state === "pending") status.textContent = publication.permalink
+      ? "The myth post is published. Retry will finish the saved explanation thread."
+      : `Bluesky has yet to confirm the post for @${account}. Retry will check the same record.`;
     else status.textContent = `This preview will be public on @${account} when you publish.`;
   }
 
@@ -109,6 +195,14 @@ const renderBlueskyDraft = (() => {
   myth.addEventListener("input", renderPreview);
   clarification.addEventListener("input", renderPreview);
   sources.addEventListener("change", renderPreview);
+  explanationFields.addEventListener("input", renderPreview);
+  explanationFields.addEventListener("change", renderPreview);
+  readMore.addEventListener("change", renderPreview);
+  addExplanation.addEventListener("click", () => {
+    if (explanationFields.children.length >= 5) return;
+    appendExplanation();
+    renderPreview();
+  });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!active || button.disabled || button.hidden) return;
@@ -119,6 +213,7 @@ const renderBlueskyDraft = (() => {
       payload.text = postText();
       payload.sources = selectedSources();
       payload.card = current.previewCard;
+      payload.explanations = current.explanations;
     }
     current.submitting = true;
     current.error = "";
@@ -156,12 +251,17 @@ const renderBlueskyDraft = (() => {
       request,
       submitting: false,
       error: "",
+      sources: draft.research.sources,
     };
     active = current;
     input.value = "";
     myth.value = "";
     clarification.value = "";
     setSources(draft.research.sources);
+    readMore.checked = true;
+    explanationFields.replaceChildren();
+    const explanation = draft.content.explanation?.length ? draft.content.explanation : [{}, {}, {}];
+    explanation.forEach(appendExplanation);
     renderPreview();
     try {
       current.publication = await request(current.endpoint);

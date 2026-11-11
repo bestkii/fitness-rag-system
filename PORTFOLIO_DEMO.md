@@ -28,6 +28,22 @@ accurate it is can vary across sets and exercises.** The workbench generates the
 image and adds the selected research link to the text preview. Review the text,
 image, and destination account before clicking **Publish with image**.
 
+Enable **Include a Read more thread** and review each explanation reply. For this
+topic, explain what repetitions in reserve measures, how predicted and actual
+repetitions were compared, what the pooled average means, and the study
+limitations. Check each statement against its selected source. The myth post's
+**Read more ↓** link will open the first reply.
+
+### Editorial explanation example
+
+Verify the [Halperin et al. review](https://doi.org/10.1007/s40279-021-01559-x)
+and select it as the source for each of these draft replies.
+
+1. Reps in reserve (RIR) describes how many more reps you think you could complete before task failure. Stopping after 8 reps at 2 RIR implies a predicted capacity of 10 reps. That prediction depends on how task failure is defined.
+2. Halperin et al. pooled 12 studies with 414 participants. Healthy participants predicted their remaining reps before or during a set, then continued to task failure so researchers could compare predicted and actual repetitions.
+3. Predictions averaged 0.95 reps below actual capacity, with a 95% confidence interval of 0.17 to 1.73. Results varied substantially across studies. The pooled average gives limited information about the error in a particular set.
+4. The review found estimates tended to improve closer to failure and in later sets. Use RIR as an estimate when logging effort. The authors also called for clearer definitions and confirmation of task failure in future studies.
+
 ## 90-second story
 
 1. Use the hero and live system map to state the problem: fitness content should

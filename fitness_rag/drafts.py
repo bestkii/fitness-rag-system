@@ -70,10 +70,15 @@ class DraftStore:
             )
             community_url = draft.get("community_source_url")
             provenance = f"\nCommunity topic source\n{community_url}\n" if community_url else ""
+            explanation = "\n\n".join(
+                f"{item['text']}\n" + " ".join(f"[S{index}]" for index in item["sources"])
+                for item in content.get("explanation", [])
+            )
             return (
                 f"{content['title']}\n\n{content['body']}\n\n{hashtags}\n\n"
                 f"Review status: {draft['status']}\n{provenance}\n"
-                f"Five-card carousel script\n{cards}\n\nResearch sources\n{sources}\n"
+                f"Five-card carousel script\n{cards}\n\n"
+                f"Detailed explanation draft\n{explanation}\n\nResearch sources\n{sources}\n"
             )
         return (
             f"{content['title']}\n\n{content['body']}\n\n{hashtags}\n\n"

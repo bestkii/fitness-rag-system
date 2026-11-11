@@ -87,11 +87,17 @@ class BlueskyCardRequest(BaseModel):
     palette: Literal["red", "gold", "blue"]
 
 
+class BlueskyExplanationRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=300)
+    sources: list[int] = Field(min_length=1, max_length=6)
+
+
 class BlueskyPublishRequest(BaseModel):
     account: str = Field(min_length=1, max_length=253)
     text: str | None = Field(default=None, max_length=300)
     sources: list[int] = Field(default_factory=list, max_length=6)
     card: BlueskyCardRequest | None = None
+    explanations: list[BlueskyExplanationRequest] = Field(default_factory=list, max_length=5)
 
 
 class PrivateReviewRequest(BaseModel):
@@ -319,7 +325,10 @@ def publish_to_bluesky(draft_id: str, request: Request, post: BlueskyPublishRequ
     draft = get_content_draft(draft_id)
     try:
         card = PostCard.decode(post.card.jpeg, post.card.alt, post.card.palette) if post.card else None
-        return publish_draft(publication_store, draft, post.account, post.text, post.sources, card)
+        return publish_draft(
+            publication_store, draft, post.account, post.text, post.sources, card,
+            [item.model_dump() for item in post.explanations],
+        )
     except PublishError as exc:
         raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
 

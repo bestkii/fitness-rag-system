@@ -98,6 +98,7 @@ class ContentWorkflowTests(unittest.TestCase):
         self.assertEqual(draft["audience"], "Fitness beginners")
         self.assertEqual(draft["tone"], "Clear, measured and friendly")
         self.assertEqual(draft["generation_mode"], "template")
+        self.assertEqual(len(draft["content"]["explanation"]), 3)
         self.assertEqual(draft["community_source_url"], community_url)
         self.assertNotIn(community_url, str(draft["research"]))
         self.assertIn("[S1]", draft["content"]["body"])
@@ -118,12 +119,33 @@ class ContentWorkflowTests(unittest.TestCase):
         self.assertIn(f"Community topic source\n{community_url}", exported)
         self.assertNotIn(community_url, exported.split("Research sources\n")[1])
 
+    def test_english_model_rejects_an_explanation_with_an_unknown_source(self):
+        payload = {
+            "title": "A fitness question",
+            "body": "A finding [S1].",
+            "hashtags": ["Fitness"],
+            "carousel": [{"heading": "Question", "copy": "Check the evidence."}] * 5,
+            "explanation": [{"text": "A finding", "sources": [99]}] * 3,
+        }
+        client = Mock()
+        client.chat.completions.create.return_value.choices = [
+            SimpleNamespace(message=SimpleNamespace(content=json.dumps(payload)))
+        ]
+        fake_openai = SimpleNamespace(OpenAI=Mock(return_value=client))
+        agent = ContentAgent(ResearchService(FakeSearchProvider()))
+        with patch.dict(os.environ, {"CONTENT_API_KEY": "test-key"}), patch.dict(
+            sys.modules, {"openai": fake_openai}
+        ):
+            with self.assertRaisesRegex(ValueError, "valid source numbers"):
+                agent.create_draft("How often should beginners train?", language="en")
+
     def test_english_model_prompt_uses_only_research_evidence(self):
         model_payload = {
             "title": "How often should beginners strength train?",
             "body": "A measured summary [S1].",
             "hashtags": ["Fitness", "Research", "Training"],
             "carousel": [{"heading": "Review", "copy": "Check the evidence."}] * 5,
+            "explanation": [{"text": "Check the study population and its limitations.", "sources": [1]}] * 3,
         }
         client = Mock()
         completion = client.chat.completions.create
@@ -143,6 +165,7 @@ class ContentWorkflowTests(unittest.TestCase):
             )
         self.assertEqual(draft["content"]["title"], model_payload["title"])
         self.assertEqual(draft["content"]["carousel"], model_payload["carousel"])
+        self.assertEqual(draft["content"]["explanation"], model_payload["explanation"])
         messages = completion.call_args.kwargs["messages"]
         self.assertIn("English fitness content editor", messages[0]["content"])
         self.assertIn("Write every field in English.", messages[1]["content"])
