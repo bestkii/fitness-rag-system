@@ -6,6 +6,12 @@ const renderBlueskyDraft = (() => {
   const sources = document.querySelector("#blueskySources");
   const preview = document.querySelector("#blueskyPreview");
   const count = document.querySelector("#blueskyCount");
+  const myth = document.querySelector("#blueskyMyth");
+  const clarification = document.querySelector("#blueskyClarification");
+  const cardFigure = document.querySelector("#blueskyCardFigure");
+  const cardPreview = document.querySelector("#blueskyCardPreview");
+  const cardPalette = document.querySelector("#blueskyCardPalette");
+  const cardMessage = document.querySelector("#blueskyCardMessage");
   const status = document.querySelector("#blueskyStatus");
   const button = document.querySelector("#blueskyPublish");
   const permalink = document.querySelector("#blueskyPermalink");
@@ -19,6 +25,20 @@ const renderBlueskyDraft = (() => {
     return input.value.replace(/^[ \t\r\n]+|[ \t\r\n]+$/g, "");
   }
 
+  function previewCard(publication) {
+    if (publication?.state !== "ready") return publication?.card ?? null;
+    const mythText = myth.value.trim().replace(/\s+/g, " ");
+    const clarificationText = clarification.value.trim().replace(/\s+/g, " ");
+    const palette = publication.next_palette;
+    if (!mythText || !clarificationText || !mythCardPalettes[palette]) return null;
+    const key = JSON.stringify([mythText, clarificationText, palette]);
+    if (key !== active.cardKey) {
+      active.card = drawMythCard(mythText, clarificationText, palette);
+      active.cardKey = key;
+    }
+    return active.card;
+  }
+
   function renderPreview() {
     if (!active) return;
     const { publication, submitting } = active;
@@ -29,16 +49,35 @@ const renderBlueskyDraft = (() => {
     const length = Array.from(text).length;
     const account = publication?.configured_account;
     const accountMatches = state !== "pending" || publication.account === account;
+    let card;
+    cardMessage.textContent = "";
+    try {
+      card = previewCard(publication);
+      if (card) {
+        const url = `data:image/jpeg;base64,${card.jpeg}`;
+        if (cardPreview.getAttribute("src") !== url) cardPreview.src = url;
+        cardPreview.alt = card.alt;
+        cardPalette.textContent = mythCardPalettes[card.palette].name;
+      } else {
+        cardPreview.removeAttribute("src");
+      }
+    } catch (error) {
+      cardMessage.textContent = error.message;
+    }
+    active.previewCard = card;
+    cardFigure.hidden = !card;
 
     preview.textContent = text;
     count.textContent = `${length} / 300 characters`;
     editor.hidden = state === "pending" || state === "published";
     input.disabled = submitting;
     sources.disabled = submitting;
+    myth.disabled = submitting;
+    clarification.disabled = submitting;
     button.hidden = state === "published";
-    button.textContent = state === "pending" ? "Retry the reviewed post" : "Publish to Bluesky";
+    button.textContent = state === "pending" ? "Retry the reviewed post" : "Publish with image";
     button.disabled = submitting || !account || !accountMatches || length > 300
-      || (state !== "pending" && (!postText() || !selected.length));
+      || (state !== "pending" && (!postText() || !selected.length || !card));
     permalink.hidden = state !== "published";
     if (state === "published") permalink.href = publication.permalink;
     else permalink.removeAttribute("href");
@@ -67,6 +106,8 @@ const renderBlueskyDraft = (() => {
   }
 
   input.addEventListener("input", renderPreview);
+  myth.addEventListener("input", renderPreview);
+  clarification.addEventListener("input", renderPreview);
   sources.addEventListener("change", renderPreview);
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -77,6 +118,7 @@ const renderBlueskyDraft = (() => {
     if (publication.state !== "pending") {
       payload.text = postText();
       payload.sources = selectedSources();
+      payload.card = current.previewCard;
     }
     current.submitting = true;
     current.error = "";
@@ -117,6 +159,8 @@ const renderBlueskyDraft = (() => {
     };
     active = current;
     input.value = "";
+    myth.value = "";
+    clarification.value = "";
     setSources(draft.research.sources);
     renderPreview();
     try {

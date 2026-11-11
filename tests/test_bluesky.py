@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import os
 import tempfile
 import unittest
@@ -8,9 +9,11 @@ from unittest.mock import Mock, patch
 
 from fitness_rag.bluesky import (
     COLLECTION,
+    MAX_CARD_BYTES,
     BlueskyClient,
     BlueskyRequestError,
     PublicationStore,
+    PostCard,
     PublishError,
     compose_post,
     publication_status,
@@ -30,6 +33,14 @@ DRAFT = {
     ]},
 }
 POST_TEXT = "How many reps did you have left? Estimates vary."
+JPEG_BYTES = b"\xff\xd8\xfffixture\xff\xd9"
+RED_CARD = PostCard(JPEG_BYTES, "Myth: 2 reps left is exact. Clarification: It is an estimate.", "red")
+CARD_BLOB = {
+    "$type": "blob",
+    "ref": {"$link": "fixture-blob"},
+    "mimeType": "image/jpeg",
+    "size": len(JPEG_BYTES),
+}
 
 
 class BlueskyPostTests(unittest.TestCase):
@@ -47,6 +58,7 @@ class BlueskyPostTests(unittest.TestCase):
         self.client.did = DID
         self.client.get.return_value = None
         self.client.create.side_effect = self.create_receipt
+        self.client.upload_card.return_value = CARD_BLOB
 
     @staticmethod
     def create_receipt(key, record):
@@ -143,6 +155,75 @@ class BlueskyPostTests(unittest.TestCase):
             publish_draft(self.store, DRAFT, ACCOUNT, POST_TEXT, [1])
         self.client.create.assert_not_called()
 
+    def test_preview_image_is_uploaded_and_included_with_its_alt_text(self):
+        result = publish_draft(self.store, DRAFT, ACCOUNT, POST_TEXT, [1], RED_CARD)
+        self.client.upload_card.assert_called_once_with(JPEG_BYTES)
+        _, record = self.client.create.call_args.args
+        self.assertEqual(record["embed"], {
+            "$type": "app.bsky.embed.images",
+            "images": [{"image": CARD_BLOB, "alt": RED_CARD.alt}],
+        })
+        self.assertEqual(result["record"], record)
+        self.assertEqual(result["card"]["jpeg"], base64.b64encode(JPEG_BYTES).decode())
+        self.assertEqual(result["card"]["palette"], "red")
+        self.assertEqual(self.store.next_palette(), "gold")
+
+    def test_rotation_uses_card_reservations_and_skips_older_text_posts(self):
+        publish_draft(self.store, DRAFT, ACCOUNT, POST_TEXT, [1])
+        self.assertEqual(self.store.next_palette(), "red")
+        for index, palette in enumerate(("red", "gold", "blue", "red")):
+            self.assertEqual(self.store.next_palette(), palette)
+            draft = {**DRAFT, "id": f"draft-{index}"}
+            card = PostCard(JPEG_BYTES, RED_CARD.alt, palette)
+            result = publish_draft(self.store, draft, ACCOUNT, POST_TEXT, [1], card)
+            self.assertEqual(result["card"]["palette"], palette)
+        self.assertEqual(self.store.next_palette(), "gold")
+
+    def test_stale_palette_requires_a_new_preview_without_an_upload(self):
+        card = PostCard(JPEG_BYTES, RED_CARD.alt, "gold")
+        with self.assertRaisesRegex(PublishError, "palette changed"):
+            publish_draft(self.store, DRAFT, ACCOUNT, POST_TEXT, [1], card)
+        self.assertIsNone(self.store.get(DRAFT["id"]))
+        self.client.upload_card.assert_not_called()
+
+    def test_retry_after_failed_upload_uses_the_same_card_and_key(self):
+        self.client.upload_card.side_effect = BlueskyRequestError()
+        with self.assertRaises(BlueskyRequestError):
+            publish_draft(self.store, DRAFT, ACCOUNT, POST_TEXT, [1], RED_CARD)
+        row = self.store.get(DRAFT["id"])
+        self.assertEqual(publication_status(row)["card"]["alt"], RED_CARD.alt)
+        self.client.create.assert_not_called()
+        self.client.upload_card.side_effect = None
+        publish_draft(self.store, DRAFT, ACCOUNT, None, [])
+        self.assertEqual(self.client.create.call_args.args[0], row["record_key"])
+        self.assertEqual(self.client.upload_card.call_count, 2)
+        self.assertEqual(self.client.upload_card.call_args.args, (JPEG_BYTES,))
+
+    def test_retry_after_uncertain_post_does_not_upload_a_second_image(self):
+        self.client.create.side_effect = BlueskyRequestError()
+        with self.assertRaises(BlueskyRequestError):
+            publish_draft(self.store, DRAFT, ACCOUNT, POST_TEXT, [1], RED_CARD)
+        key, record = self.client.create.call_args.args
+        self.client.get.return_value = {**self.create_receipt(key, record), "value": record}
+        result = publish_draft(self.store, DRAFT, ACCOUNT, None, [])
+        self.assertEqual(result["state"], "published")
+        self.client.upload_card.assert_called_once()
+        self.client.create.assert_called_once()
+
+    def test_card_requires_valid_base64_jpeg_alt_text_and_palette(self):
+        encoded = base64.b64encode(JPEG_BYTES).decode()
+        self.assertEqual(PostCard.decode(encoded, RED_CARD.alt, "red"), RED_CARD)
+        oversized = base64.b64encode(b"\xff\xd8\xff" + b"x" * MAX_CARD_BYTES + b"\xff\xd9").decode()
+        for data, alt, palette in (
+            ("invalid!", RED_CARD.alt, "red"),
+            ("ZGF0YQ==", RED_CARD.alt, "red"),
+            (oversized, RED_CARD.alt, "red"),
+            (encoded, " ", "red"),
+            (encoded, RED_CARD.alt, "green"),
+        ):
+            with self.subTest(palette=palette, length=len(data)), self.assertRaises(PublishError):
+                PostCard.decode(data, alt, palette)
+
 
 class BlueskyTransportTests(unittest.TestCase):
     def test_hosted_account_writes_to_the_pds_with_the_saved_key(self):
@@ -163,3 +244,14 @@ class BlueskyTransportTests(unittest.TestCase):
         ))
         self.assertEqual(rpc.call_args.kwargs["body"]["rkey"], "3jzfcijpj2z2a")
         self.assertEqual(rpc.call_args.kwargs["body"]["repo"], DID)
+
+    def test_image_transport_uses_raw_jpeg_and_validates_the_blob(self):
+        session = {"did": DID, "accessJwt": "test-session-token"}
+        responses = [session, {"blob": CARD_BLOB}, {"blob": {**CARD_BLOB, "size": 1}}]
+        with patch("fitness_rag.bluesky._rpc", Mock(side_effect=responses)) as rpc:
+            client = BlueskyClient(ACCOUNT, "test-password")
+            self.assertEqual(client.upload_card(JPEG_BYTES), CARD_BLOB)
+            self.assertEqual(rpc.call_args.args[1], "com.atproto.repo.uploadBlob")
+            self.assertEqual(rpc.call_args.kwargs["jpeg"], JPEG_BYTES)
+            with self.assertRaises(BlueskyRequestError):
+                client.upload_card(JPEG_BYTES)

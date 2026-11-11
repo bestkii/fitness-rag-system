@@ -22,8 +22,11 @@ Select that paper in the Bluesky preview. Example post text for editorial review
 > lifters underestimated reps to failure by about one rep on average. Estimates
 > varied widely, so treat reps in reserve as a rough guide. AI-assisted.
 
-The workbench appends the selected research link to the preview. Review the full
-text and destination account before clicking **Publish to Bluesky**.
+For the image, enter the misconception **Two reps in reserve means I had exactly
+two reps left** and the clarification **Reps in reserve is an estimate. How
+accurate it is can vary across sets and exercises.** The workbench generates the
+image and adds the selected research link to the text preview. Review the text,
+image, and destination account before clicking **Publish with image**.
 
 ## 90-second story
 

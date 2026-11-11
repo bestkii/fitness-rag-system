@@ -58,10 +58,22 @@
                   <label for="blueskyText">English post text</label>
                   <textarea id="blueskyText" maxlength="600" rows="4" placeholder="Write the takeaway and its main limitation."></textarea>
                   <fieldset id="blueskySources"><legend>Research links to include</legend></fieldset>
+                  <fieldset id="blueskyCardEditor">
+                    <legend>Myth and clarification</legend>
+                    <label for="blueskyMyth">What might readers misunderstand?</label>
+                    <textarea id="blueskyMyth" maxlength="140" rows="2" placeholder="“Two reps in reserve” means I had exactly two reps left."></textarea>
+                    <label for="blueskyClarification">What does the evidence clarify?</label>
+                    <textarea id="blueskyClarification" maxlength="180" rows="2" placeholder="Reps in reserve estimates effort. Its accuracy varies from set to set."></textarea>
+                  </fieldset>
                 </div>
                 <p id="blueskyPreviewLabel">Public post preview</p>
                 <pre id="blueskyPreview" aria-labelledby="blueskyPreviewLabel"></pre>
                 <p id="blueskyCount" class="form-note"></p>
+                <figure id="blueskyCardFigure" hidden>
+                  <img id="blueskyCardPreview" width="960" height="960" alt="">
+                  <figcaption id="blueskyCardPalette"></figcaption>
+                </figure>
+                <p id="blueskyCardMessage" class="form-note"></p>
                 <p id="blueskyStatus" role="status"></p>
                 <button type="submit" id="blueskyPublish" class="review-button" disabled>Publish to Bluesky</button>
                 <a id="blueskyPermalink" target="_blank" rel="noopener noreferrer" hidden>Open published post</a>
@@ -156,6 +168,7 @@
 
   <footer><div><strong>Fitness Evidence Studio</strong><span>Research Agent · RAG · Human Review</span></div><p>Portfolio prototype by Lin Yuxuan · For research and demonstration only; not professional health advice</p></footer>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="/static/myth-card.js"></script>
   <script src="/static/bluesky.js"></script>
   <script src="/static/app.js"></script>
 </body>
