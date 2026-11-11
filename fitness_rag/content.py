@@ -105,9 +105,13 @@ class ContentAgent:
                 "approved_at": None,
             },
             "publishing": {
-                "mode": "export_only",
+                "mode": "reviewed_bluesky_or_export" if english else "export_only",
                 "platform": "generic" if english else "xiaohongshu",
-                "note": "No content is posted automatically. Approval and export are separate actions.",
+                "note": (
+                    "Approve the draft before exporting or reviewing a separate Bluesky preview."
+                    if english else
+                    "No content is posted automatically. Approval and export are separate actions."
+                ),
             },
         }
 

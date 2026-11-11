@@ -11,6 +11,20 @@ inspect the five cards and academic source links, acknowledge source review, and
 export the approved text pack. The Chinese demo below covers the private textbook
 and Xiaohongshu modules.
 
+## Bluesky demo
+
+Use the English topic **Accuracy in predicting repetitions to task failure in
+resistance exercise**. Look for the 2022 Halperin et al. exploratory
+meta-analysis, DOI `10.1007/s40279-021-01559-x`, and check the original source.
+Select that paper in the Bluesky preview. Example post text for editorial review:
+
+> How many reps did you have left? In a review of resistance training studies,
+> lifters underestimated reps to failure by about one rep on average. Estimates
+> varied widely, so treat reps in reserve as a rough guide. AI-assisted.
+
+The workbench appends the selected research link to the preview. Review the full
+text and destination account before clicking **Publish to Bluesky**.
+
 ## 90-second story
 
 1. Use the hero and live system map to state the problem: fitness content should
