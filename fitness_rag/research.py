@@ -184,10 +184,18 @@ def _academic_topic(topic: str) -> str:
     return " ".join(dict.fromkeys(matched)) or topic
 
 
+def _is_fasted_cardio_topic(topic: str) -> bool:
+    normalized = topic.casefold()
+    return "空腹有氧" in topic or (
+        any(term in normalized for term in ("fasted", "fasting"))
+        and any(term in normalized for term in ("cardio", "aerobic", "exercise"))
+    )
+
+
 def _required_concept_groups(topic: str) -> tuple[tuple[str, ...], ...]:
     """Return strict concept groups only for topics with known ambiguity."""
 
-    if "空腹有氧" in topic:
+    if _is_fasted_cardio_topic(topic):
         return (("fasted", "fasting"), ("exercise", "aerobic", "cardio"))
     return ()
 
@@ -224,7 +232,7 @@ def _matches_required_concepts(source: SearchResult, topic: str) -> bool:
     )
     if not matches_all:
         return False
-    if "空腹有氧" in topic:
+    if _is_fasted_cardio_topic(topic):
         title = source.title.casefold()
         return any(term in title for term in groups[0])
     return True
@@ -247,7 +255,7 @@ class ResearchService:
     @staticmethod
     def plan_queries(topic: str) -> list[str]:
         normalized = " ".join(topic.split())
-        if "空腹有氧" in normalized:
+        if _is_fasted_cardio_topic(normalized):
             return [
                 "fasted exercise versus fed exercise body composition systematic review meta-analysis",
                 "fasted aerobic exercise fat oxidation fat loss randomized trial",

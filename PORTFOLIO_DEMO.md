@@ -1,22 +1,32 @@
 # Portfolio demo: Fitness Evidence Studio
 
+The local interview interface is available in both languages:
+
+- English: `http://127.0.0.1:8010/` or `http://127.0.0.1:8010/en`
+- Chinese: `http://127.0.0.1:8010/zh`
+
+In the English workbench, open a candidate under **Community Questions**, select
+**Use as topic**, and enter an editorial question in English. Run the draft,
+inspect the five cards and academic source links, acknowledge source review, and
+export the approved text pack. The Chinese demo below covers the private textbook
+and Xiaohongshu modules.
+
 ## 90-second story
 
-1. Enter a question such as `空腹有氧真的比普通有氧更减脂吗？`.
-2. Show a locally collected Xiaohongshu trend card and explain that it is used only
-   for topic discovery, not as factual evidence.
-3. Load the representative textbook review queue, open one local source-page
-   preview, and show the explicit approve/exclude controls.
-4. Search the local staging corpus and point out the printed-page citation,
-   OCR-review status, and local-only boundary.
-5. Explain that only human-approved chunks can enter the separate formal index.
-6. Show the two PubMed/Crossref queries planned by the agent.
-7. Open the ranked source links and point out their source-tier labels.
-8. Review the generated title, body, source markers, and five-card script.
-9. Explain that neither private OCR text nor the old synthetic RAG result becomes a public citation.
-10. Trigger the approval guard without checking the box to demonstrate the blocked state.
-11. Open the sources, acknowledge review, approve, and export the text pack.
-12. End on both retrieval evaluations and their different claim boundaries.
+1. Use the hero and live system map to state the problem: fitness content should
+   be traceable and reviewable, not merely generated.
+2. Show the five-stage architecture and explain the separation between trend
+   discovery, academic evidence, RAG context, generation, and approval.
+3. Open **内容 Agent**, enter `空腹有氧真的比普通有氧更减脂吗？`, and run the
+   real research-and-draft workflow.
+4. Point out the ranked PubMed/Crossref sources, source markers, five-card script,
+   and the approval guard that blocks export before source acknowledgement.
+5. Switch to **教材 RAG**, search `抗阻训练计划包含哪些设计变量？`, and show the
+   printed-page citation, local-only boundary, and explicit approve/exclude state.
+6. End on **Evaluation**: dense retrieval wins on the fixed synthetic benchmark,
+   while character TF-IDF wins on the private textbook development pilot.
+7. Close with the ownership and limitations cards; do not imply medical validation
+   or autonomous publishing.
 
 ## What this demonstrates
 

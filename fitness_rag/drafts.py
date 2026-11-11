@@ -63,6 +63,18 @@ class DraftStore:
             f"[S{index}] {source['title']} — {source['url']}"
             for index, source in enumerate(draft["research"]["sources"], 1)
         )
+        if draft.get("language") == "en":
+            cards = "\n\n".join(
+                f"{index}. {card['heading']}\n{card['copy']}"
+                for index, card in enumerate(content["carousel"], 1)
+            )
+            community_url = draft.get("community_source_url")
+            provenance = f"\nCommunity topic source\n{community_url}\n" if community_url else ""
+            return (
+                f"{content['title']}\n\n{content['body']}\n\n{hashtags}\n\n"
+                f"Review status: {draft['status']}\n{provenance}\n"
+                f"Five-card carousel script\n{cards}\n\nResearch sources\n{sources}\n"
+            )
         return (
             f"{content['title']}\n\n{content['body']}\n\n{hashtags}\n\n"
             f"审核状态：{draft['status']}\n\n来源（发布前请逐条打开核对）：\n{sources}\n"

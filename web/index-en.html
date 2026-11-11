@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Fitness Evidence Studio — a human-reviewed research and RAG workflow for traceable fitness content">
+  <title>Fitness Evidence Studio</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Fitness Evidence Studio home">
+      <span class="brand-mark" aria-hidden="true">FE</span>
+      <span class="brand-copy"><strong>Fitness Evidence Studio</strong><small>AI PROJECT / 2026</small></span>
+    </a>
+    <nav class="main-nav" aria-label="Page navigation">
+      <a href="#demo">Workbench</a><a href="#architecture">Architecture</a><a href="#evaluation">Evaluation</a><a href="#scope">Scope</a>
+    </nav>
+    <div class="header-tools">
+      <div class="system-status" title="Live backend status"><span class="pulse"></span><span id="systemStatus">Connecting to the local service…</span></div>
+      <a class="language-switch" href="/zh">Chinese workspace</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="demo section-shell english-workbench" id="demo">
+      <div class="section-heading compact">
+        <div><h1>Fitness Evidence Studio</h1><p>Find fitness questions, check the research, and prepare an English content draft for review.</p></div>
+      </div>
+      <details id="communityPanel" class="control-card community-panel" open>
+        <summary>Community Questions</summary>
+        <p>Possible questions from Mastodon. Open an original post and use your own wording to create a topic.</p>
+        <button type="button" id="refreshCommunity">Refresh questions</button>
+        <p id="communityStatus" class="form-note" role="status"></p>
+        <ul id="communityQuestions" class="community-questions"></ul>
+      </details>
+      <div class="demo-workspace">
+        <section class="demo-panel" aria-labelledby="draft-heading">
+          <div class="workspace-intro"><div><h2 id="draft-heading">Create a sourced draft</h2><p>Enter your own question or use a community post as a starting point.</p></div></div>
+          <form id="draftForm" class="control-card draft-form">
+            <label for="topicInput">Topic / question</label><textarea id="topicInput" minlength="4" maxlength="300" placeholder="Does fasted cardio lead to more fat loss than fed cardio?" required></textarea>
+            <p id="attachedCommunitySource" class="form-note" hidden>Community topic source: <a id="attachedCommunityLink" target="_blank" rel="noopener noreferrer">Open original post</a> <button type="button" id="clearCommunitySource">Remove</button></p>
+            <div class="draft-options"><label>Target audience<select id="audienceInput"><option value="Fitness beginners">Fitness beginners</option><option value="General readers with training experience">General users with training experience</option><option value="Young adults interested in fat loss">Young adults interested in fat loss</option></select></label><label>Writing tone<select id="toneInput"><option value="Clear, measured and friendly">Clear, measured and friendly</option><option value="Conversational without hype">Conversational without hype</option><option value="Professional and concise">Professional and concise</option></select></label></div>
+            <button class="run-button" id="draftButton" type="submit"><span>Run research and drafting</span><b>RUN ↗</b></button>
+          </form>
+          <div id="draftLoading" class="process-trace" hidden aria-live="polite"><span class="trace-dot"></span><strong>Agent working</strong><span>Plan queries</span><i>→</i><span>Retrieve sources</span><i>→</i><span>Draft content</span><i>→</i><span>Check citations</span></div>
+          <section id="draftPanel" class="output-panel" hidden aria-live="polite">
+            <div class="output-heading"><div><p class="workspace-label">AGENT OUTPUT / REVIEW GATE</p><h3 id="draftTitle"></h3></div><span id="draftStatus" class="status-chip">DRAFT</span></div>
+            <div class="draft-layout"><article class="post-preview"><pre id="draftBody"></pre><div id="draftHashtags" class="hashtags"></div></article><aside class="review-card"><span class="review-lock">HUMAN GATE</span><h3>Human review required before export</h3><ul id="reviewFlags"></ul><label class="approval-check"><input type="checkbox" id="sourceAcknowledgement">I opened and checked the original sources</label><button type="button" id="approveButton" class="review-button">Approve draft</button><a id="exportLink" class="export-link disabled" href="#">Export text pack</a></aside></div>
+            <h3 class="subheading">Five-card carousel script</h3><div id="carouselCards" class="carousel-cards"></div>
+            <p id="draftCommunitySource" class="form-note" hidden>Community topic source: <a id="draftCommunityLink" target="_blank" rel="noopener noreferrer">Open original post</a></p>
+            <div class="source-heading"><h3>Academic sources</h3><p>Abstracts and metadata support discovery; reviewers must still open the original papers before approval.</p></div><div id="sourceList" class="source-list"></div>
+          </section>
+        </section>
+      </div>
+    </section>
+
+    <section class="hero" id="overview">
+      <div class="hero-glow" aria-hidden="true"></div>
+      <div class="hero-copy">
+        <p class="eyebrow"><span>PORTFOLIO CASE 01</span> RESEARCH AGENT · RAG · HUMAN REVIEW</p>
+        <h1>Fitness content,<br><em>grounded in evidence.</em></h1>
+        <p class="lede">The English workbench combines community topic discovery, academic search, structured drafting, and human source review.</p>
+        <div class="hero-actions">
+          <a class="primary-action" href="#demo"><span>Open the live demo</span><b>↘</b></a>
+          <a class="secondary-action" href="#architecture">Explore the architecture</a>
+        </div>
+        <div class="hero-meta"><span>Python 3.12</span><span>FastAPI</span><span>BGE Embedding</span><span>ChromaDB</span><span>Human-in-the-loop</span></div>
+      </div>
+      <aside class="hero-console" aria-label="Live system component status">
+        <div class="console-head"><span>LIVE SYSTEM MAP</span><span class="console-dots">● ● ●</span></div>
+        <div class="console-flow">
+          <div class="console-node is-live"><span>01</span><div><strong>Topic intake</strong><small>Manual topic or Mastodon post</small></div></div><div class="console-line"></div>
+          <div class="console-node is-live"><span>02</span><div><strong>Evidence retrieval</strong><small id="researchState">PubMed + Crossref</small></div></div><div class="console-line"></div>
+          <div class="console-node" id="ragNode"><span>03</span><div><strong>Retrieval benchmarks</strong><small id="ragState">Separate retrieval benchmarks</small></div></div><div class="console-line"></div>
+          <div class="console-node" id="reviewNode"><span>04</span><div><strong>Review gate</strong><small id="booksState">Source review before export</small></div></div>
+        </div>
+        <div class="console-foot"><span>OUTPUT</span><strong>A reviewable content pack — never an automatic post</strong></div>
+      </aside>
+    </section>
+
+    <section class="proof-strip" aria-label="Key project evidence">
+      <article><strong>3,000</strong><span>synthetic fitness records</span><small>2,700 indexed / 300 held out</small></article>
+      <article><strong id="heroHitRate">83.67%</strong><span>Dense Hit@3</span><small>fixed split-v2 evaluation</small></article>
+      <article><strong>12</strong><span>human-approved textbook chunks</span><small>separate approved-only index</small></article>
+    </section>
+
+    <section class="architecture section-shell" id="architecture">
+      <div class="section-heading">
+        <div><p class="section-kicker">01 / SYSTEM ARCHITECTURE</p><h2>More than a prompt.<br>An auditable workflow.</h2></div>
+        <p>Each layer solves a distinct problem: popularity is not evidence, retrieval is not an answer, and generation is not approval. Every important intermediate state remains inspectable.</p>
+      </div>
+      <div class="architecture-flow" aria-label="End-to-end system architecture">
+        <article class="architecture-card accent-lime"><div class="card-index">01 / DISCOVER</div><div class="card-icon">⌁</div><h3>Trend discovery</h3><p>Finds possible English-language fitness questions from public Mastodon hashtag timelines.</p><div class="tech-tags"><span>Mastodon API</span><span>On demand</span></div></article>
+        <div class="flow-connector" aria-hidden="true">→</div>
+        <article class="architecture-card accent-blue"><div class="card-index">02 / RESEARCH</div><div class="card-icon">⌕</div><h3>Dual academic search</h3><p>The agent plans two queries, searches PubMed and Crossref, removes duplicates, checks topic relevance and assigns source tiers.</p><div class="tech-tags"><span>PubMed API</span><span>Crossref API</span><span>Policy</span></div></article>
+        <div class="flow-connector" aria-hidden="true">→</div>
+        <article class="architecture-card accent-violet"><div class="card-index">03 / RETRIEVE</div><div class="card-icon">⌘</div><h3>Dual RAG evidence layer</h3><p>The synthetic benchmark uses BGE + ChromaDB; the private textbook pilot uses character TF-IDF because it performed better on that development set.</p><div class="tech-tags"><span>512-d BGE</span><span>ChromaDB</span><span>TF-IDF</span></div></article>
+        <div class="flow-connector" aria-hidden="true">→</div>
+        <article class="architecture-card accent-orange"><div class="card-index">04 / GENERATE</div><div class="card-icon">✦</div><h3>Structured generation</h3><p>Produces a title, body, five-card script, source markers and review warnings. The English template works without a model key.</p><div class="tech-tags"><span>DeepSeek optional</span><span>Template fallback</span></div></article>
+        <div class="flow-connector" aria-hidden="true">→</div>
+        <article class="architecture-card accent-red"><div class="card-index">05 / APPROVE</div><div class="card-icon">✓</div><h3>Human approval gate</h3><p>Approval and export remain blocked until original-source review is acknowledged. The system has no automatic posting action.</p><div class="tech-tags"><span>Pydantic</span><span>State machine</span><span>Guardrails</span></div></article>
+      </div>
+      <div class="engineering-grid">
+        <article><span>DECISION 01</span><h3>Why two retrievers?</h3><p>This is an evaluation decision, not technology stacking. Dense retrieval won on the synthetic benchmark; character TF-IDF reached 100% page-range Hit@3 on the small textbook development set.</p></article>
+        <article><span>DECISION 02</span><h3>Why no automatic publishing?</h3><p>Health content requires human judgment about sources and wording. The product state machine allows only <code>draft → approved → export</code>, with no publish action.</p></article>
+        <article><span>DECISION 03</span><h3>How is private material protected?</h3><p>Textbook PDFs, OCR text, vector data and review records stay in ignored local directories. They never enter web search or cloud-generation context.</p></article>
+      </div>
+    </section>
+
+    <section class="evaluation section-shell" id="evaluation">
+      <div class="section-heading"><div><p class="section-kicker">03 / EVALUATION</p><h2>Technology choices driven by evidence,<br>not buzzwords.</h2></div><p>The two corpora have different properties, so the system uses different retrieval approaches. Every metric states what it measures — and what it cannot establish.</p></div>
+      <div class="evaluation-grid">
+        <article class="benchmark-card">
+          <div class="benchmark-head"><div><span>BENCHMARK A</span><h3>3,000 synthetic records · fixed held-out set</h3></div><span class="winner-chip">DENSE WINS</span></div>
+          <div class="metric-row"><div><span>Topic-pair Hit@3</span><strong id="hitRate">—</strong></div><div class="bar-track"><span id="denseHitBar" class="bar-fill dense" style="--value:0%"></span></div><small>BGE + ChromaDB</small></div>
+          <div class="metric-row"><div><span>TF-IDF Hit@3</span><strong id="baselineRate">—</strong></div><div class="bar-track"><span id="baselineHitBar" class="bar-fill baseline" style="--value:0%"></span></div><small>Lexical baseline</small></div>
+          <div class="metric-foot"><span>300 held-out queries</span><span>+3.00 percentage points</span><span id="expertRate">— expert Hit@3</span></div>
+        </article>
+        <article class="benchmark-card">
+          <div class="benchmark-head"><div><span>BENCHMARK B</span><h3>Private textbooks · 11-query development set</h3></div><span class="winner-chip blue">TF-IDF WINS</span></div>
+          <div class="metric-row"><div><span>Character TF-IDF page-range Hit@3</span><strong>100%</strong></div><div class="bar-track"><span class="bar-fill textbook" style="--value:100%"></span></div><small>Default method for the local demo</small></div>
+          <div class="metric-row"><div><span>Dense page-range Hit@3</span><strong>81.82%</strong></div><div class="bar-track"><span class="bar-fill baseline" style="--value:81.82%"></span></div><small>Comparison on the same development set</small></div>
+          <div class="metric-foot"><span>Development pilot</span><span>Not a held-out benchmark</span><span>Does not measure OCR correctness</span></div>
+        </article>
+      </div>
+      <div class="metric-disclaimer"><strong>Metric boundaries</strong><p>The synthetic metric measures topic-pair retrieval relevance. The textbook metric measures whether a target page range appears in the Top-3. Neither establishes answer quality, medical correctness or clinical validity.</p></div>
+    </section>
+
+    <section class="scope section-shell" id="scope">
+      <div class="section-heading compact"><div><p class="section-kicker">04 / OWNERSHIP & SCOPE</p><h2>What I implemented —<br>and what the system does not claim.</h2></div></div>
+      <div class="scope-grid">
+        <article class="ownership-card"><span>MY IMPLEMENTATION</span><h3>Engineering work</h3><ul><li>FastAPI endpoints and Pydantic input validation</li><li>PubMed / Crossref adapters and source-ranking policy</li><li>BGE + ChromaDB and TF-IDF retrieval paths</li><li>OCR quality gates, page provenance and local review state</li><li>Draft state machine, citation checks and export gate</li><li>Automated tests and a release guard</li></ul></article>
+        <article class="boundary-card"><span>EXPLICIT BOUNDARIES</span><h3>Honest limitations</h3><ul><li>Not a medical diagnosis or clinically validated system</li><li>Academic abstracts are research leads, not full-paper evidence</li><li>No automatic Xiaohongshu publishing or engagement actions</li><li>Private textbook content is never sent to third-party services</li><li>Content quality, cost, latency and engagement remain unevaluated</li><li>The synthetic benchmark is not a real-world medical knowledge base</li></ul></article>
+        <aside class="interview-card"><span>90-SECOND INTERVIEW ROUTE</span><ol><li><b>20s</b> Frame the problem and workflow</li><li><b>35s</b> Run the Content Agent</li><li><b>20s</b> Show academic source review</li><li><b>15s</b> Explain retrieval choices with evidence</li></ol><a href="#demo">Start the demo ↗</a></aside>
+      </div>
+    </section>
+  </main>
+
+  <footer><div><strong>Fitness Evidence Studio</strong><span>Research Agent · RAG · Human Review</span></div><p>Portfolio prototype by Lin Yuxuan · For research and demonstration only; not professional health advice</p></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

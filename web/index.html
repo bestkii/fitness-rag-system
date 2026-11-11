@@ -1,259 +1,165 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Evidence-grounded fitness research and Xiaohongshu draft studio">
-  <title>Evidence Studio · Fitness RAG Agent</title>
+  <meta name="description" content="Fitness Evidence Studio — a human-reviewed RAG and research workflow for evidence-grounded fitness content">
+  <title>Fitness Evidence Studio · Project Demo</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="/" aria-label="Fitness Evidence Studio home">
-      <span class="brand-mark">RS</span>
-      <span>FITNESS EVIDENCE STUDIO</span>
+    <a class="brand" href="#overview" aria-label="Fitness Evidence Studio 首页">
+      <span class="brand-mark" aria-hidden="true">FE</span>
+      <span class="brand-copy"><strong>Fitness Evidence Studio</strong><small>AI PROJECT / 2026</small></span>
     </a>
-    <div class="system-status">
-      <span class="pulse"></span>
-      <span id="systemStatus">Loading evidence engine…</span>
+    <nav class="main-nav" aria-label="页面导航">
+      <a href="#architecture">架构</a><a href="#demo">Demo</a><a href="#evaluation">评测</a><a href="#scope">边界</a>
+    </nav>
+    <div class="header-tools">
+      <div class="system-status" title="后端实时状态"><span class="pulse"></span><span id="systemStatus">正在连接本地服务…</span></div>
+      <a class="language-switch" href="/en" lang="en" aria-label="Switch to English">EN</a>
     </div>
   </header>
 
   <main>
-    <section class="hero">
+    <section class="hero" id="overview">
+      <div class="hero-glow" aria-hidden="true"></div>
       <div class="hero-copy">
-        <p class="eyebrow">RESEARCH AGENT + RAG + HUMAN REVIEW / 2026</p>
-        <h1>Research first.<br><em>Publish carefully.</em></h1>
-        <p class="lede">Turn a fitness topic into a source-linked Xiaohongshu draft while keeping research, synthetic RAG context, and human approval visibly separate.</p>
+        <p class="eyebrow"><span>PORTFOLIO CASE 01</span> RESEARCH AGENT · RAG · HUMAN REVIEW</p>
+        <h1>让健身内容从<br><em>“会生成”</em>走向<em>“可追溯”</em></h1>
+        <p class="lede">一个面向小红书内容场景的证据工作流：从选题信号、学术检索和本地教材 RAG，到结构化草稿、引用检查与人工审批。系统刻意停在发布之前。</p>
+        <div class="hero-actions">
+          <a class="primary-action" href="#demo"><span>进入交互 Demo</span><b>↘</b></a>
+          <a class="secondary-action" href="#architecture">查看技术架构</a>
+        </div>
+        <div class="hero-meta"><span>Python 3.12</span><span>FastAPI</span><span>BGE Embedding</span><span>ChromaDB</span><span>Human-in-the-loop</span></div>
       </div>
-      <aside class="hero-stat" aria-label="System corpus size">
-        <span class="stat-number">2,700</span>
-        <span class="stat-label">indexed evidence records</span>
-        <span class="stat-note">+ 300 held out for evaluation</span>
+      <aside class="hero-console" aria-label="实时系统组件状态">
+        <div class="console-head"><span>LIVE SYSTEM MAP</span><span class="console-dots">● ● ●</span></div>
+        <div class="console-flow">
+          <div class="console-node is-live"><span>01</span><div><strong>Topic intake</strong><small>用户问题 / 趋势信号</small></div></div><div class="console-line"></div>
+          <div class="console-node is-live"><span>02</span><div><strong>Evidence retrieval</strong><small id="researchState">PubMed + Crossref</small></div></div><div class="console-line"></div>
+          <div class="console-node" id="ragNode"><span>03</span><div><strong>Dual RAG layer</strong><small id="ragState">BGE / TF-IDF</small></div></div><div class="console-line"></div>
+          <div class="console-node" id="reviewNode"><span>04</span><div><strong>Review gate</strong><small id="booksState">Local approval state</small></div></div>
+        </div>
+        <div class="console-foot"><span>OUTPUT</span><strong>可审核的内容包，而非自动发布</strong></div>
       </aside>
     </section>
 
-    <section class="trend-radar" aria-labelledby="trendHeading">
-      <div class="section-number">00 / LOCAL XIAOHONGSHU TREND RADAR</div>
-      <div class="trend-grid">
-        <div>
-          <h2 id="trendHeading">Separate popularity from evidence.</h2>
-          <p class="field-help">This panel reads only the public search cards you collected locally. It helps choose a topic; PubMed and Crossref support the factual claims.</p>
-        </div>
-        <form id="trendForm" class="trend-form">
-          <label for="trendKeyword">Collected keyword</label>
-          <div class="trend-controls">
-            <input id="trendKeyword" maxlength="100" value="首页健身筛选" required>
-            <button type="submit">Load local trends</button>
-          </div>
-          <p id="trendHint">Collection is launched manually and stops on login or risk-control checks.</p>
-        </form>
-      </div>
-      <div id="trendResults" class="trend-results" hidden></div>
+    <section class="proof-strip" aria-label="项目关键证据">
+      <article><strong>3,000</strong><span>条合成健身语料</span><small>2,700 索引 / 300 留出</small></article>
+      <article><strong id="heroHitRate">83.67%</strong><span>Dense Hit@3</span><small>固定 split-v2 评测</small></article>
+      <article><strong>12</strong><span>人工批准教材 chunks</span><small>独立 approved-only index</small></article>
+      <article><strong>37</strong><span>自动化测试</span><small>系统、研究、审核、发布边界</small></article>
     </section>
 
-    <section class="private-library" aria-labelledby="libraryHeading">
-      <div class="section-number">01 / LOCAL TEXTBOOK RETRIEVAL</div>
-      <div class="library-grid">
-        <div>
-          <h2 id="libraryHeading">Ask the books. Keep the books local.</h2>
-          <p class="field-help">Searches the staged dietary-guideline and NSCA sections on this computer. Results retain printed-page citations and are never sent to the web research or cloud content model.</p>
-        </div>
-        <form id="libraryForm" class="library-form">
-          <label for="libraryQuery">Training or nutrition question</label>
-          <div class="library-controls">
-            <input id="libraryQuery" maxlength="300" value="抗阻训练组间休息时间如何安排？" required>
-            <button type="submit">Search local books</button>
-          </div>
-          <p>Staging corpus · OCR and page order still require human verification.</p>
-          <div class="review-toolbar">
-            <button type="button" id="loadReviewQueue">Load 12-item review queue</button>
-            <span id="reviewSummary">0 reviewed · 126 pending</span>
-          </div>
-        </form>
+    <section class="architecture section-shell" id="architecture">
+      <div class="section-heading">
+        <div><p class="section-kicker">01 / SYSTEM ARCHITECTURE</p><h2>不是一个 Prompt，<br>而是一条可审计工作流。</h2></div>
+        <p>每一层解决一个明确问题：选题不等于证据，检索不等于答案，生成不等于可发布。所有关键中间状态都可以被检查。</p>
       </div>
-      <div id="libraryResults" class="library-results" hidden></div>
-    </section>
-
-    <section class="creator" aria-labelledby="creatorHeading">
-      <div class="section-number">02 / CREATE A SOURCED DRAFT</div>
-      <div class="creator-grid">
-        <div>
-          <h2 id="creatorHeading">From a topic to a reviewable content pack.</h2>
-          <p class="field-help">The agent plans two searches, ranks sources, drafts five carousel cards, and stops before publishing.</p>
-        </div>
-        <form id="draftForm" class="draft-form">
-          <label for="topicInput">Topic or question</label>
-          <textarea id="topicInput" maxlength="300" required>空腹有氧真的比普通有氧更减脂吗？</textarea>
-          <div class="draft-options">
-            <label>Audience
-              <select id="audienceInput">
-                <option>健身初学者</option>
-                <option>有训练经验的普通用户</option>
-                <option>关注减脂的年轻人</option>
-              </select>
-            </label>
-            <label>Tone
-              <select id="toneInput">
-                <option>清晰、克制、友好</option>
-                <option>轻松但不夸张</option>
-                <option>专业、简洁</option>
-              </select>
-            </label>
-          </div>
-          <button class="analyze-button" id="draftButton" type="submit">
-            <span>Research + create draft</span><span aria-hidden="true">↗</span>
-          </button>
-        </form>
+      <div class="architecture-flow" aria-label="端到端系统架构">
+        <article class="architecture-card accent-lime"><div class="card-index">01 / DISCOVER</div><div class="card-icon">⌁</div><h3>趋势发现</h3><p>读取本地保存的公开卡片，只判断讨论热度，不把社媒内容当科学证据。</p><div class="tech-tags"><span>Playwright</span><span>SQLite</span><span>Read-only</span></div></article>
+        <div class="flow-connector" aria-hidden="true">→</div>
+        <article class="architecture-card accent-blue"><div class="card-index">02 / RESEARCH</div><div class="card-icon">⌕</div><h3>双路学术检索</h3><p>Agent 规划两条查询，经 PubMed 与 Crossref 搜索、去重、主题匹配和来源分层。</p><div class="tech-tags"><span>PubMed API</span><span>Crossref API</span><span>Policy</span></div></article>
+        <div class="flow-connector" aria-hidden="true">→</div>
+        <article class="architecture-card accent-violet"><div class="card-index">03 / RETRIEVE</div><div class="card-icon">⌘</div><h3>双 RAG 证据层</h3><p>合成库采用 BGE + ChromaDB；私有教材依据实测结果采用字符 TF-IDF，并保留页码。</p><div class="tech-tags"><span>512-d BGE</span><span>ChromaDB</span><span>TF-IDF</span></div></article>
+        <div class="flow-connector" aria-hidden="true">→</div>
+        <article class="architecture-card accent-orange"><div class="card-index">04 / GENERATE</div><div class="card-icon">✦</div><h3>结构化生成</h3><p>输出标题、正文、五卡脚本、来源标记和审核警告；无 Key 时仍可确定性运行。</p><div class="tech-tags"><span>DeepSeek optional</span><span>Template fallback</span></div></article>
+        <div class="flow-connector" aria-hidden="true">→</div>
+        <article class="architecture-card accent-red"><div class="card-index">05 / APPROVE</div><div class="card-icon">✓</div><h3>人工审批门</h3><p>未确认原始来源时拒绝批准与导出；系统没有自动发帖能力。</p><div class="tech-tags"><span>Pydantic</span><span>State machine</span><span>Guardrails</span></div></article>
+      </div>
+      <div class="engineering-grid">
+        <article><span>DECISION 01</span><h3>为什么有两种检索器？</h3><p>不是为了堆技术。合成基准里 Dense retrieval 更好；教材开发集里字符 TF-IDF 达到 100% page-range Hit@3，因此系统按评测选型。</p></article>
+        <article><span>DECISION 02</span><h3>为什么不自动发布？</h3><p>健康内容的来源与表述需要人工判断。产品状态机只允许 <code>draft → approved → export</code>，不提供 publish 动作。</p></article>
+        <article><span>DECISION 03</span><h3>如何保护私有资料？</h3><p>教材 PDF、OCR 文本、向量数据和审核数据库只保存在本地忽略目录，不进入公网检索或云端生成上下文。</p></article>
       </div>
     </section>
 
-    <section id="draftLoading" class="loading-panel" hidden aria-live="polite">
-      <div class="scan-line"></div>
-      <p>Planning searches · ranking sources · drafting · checking citations</p>
+    <section class="demo section-shell" id="demo">
+      <div class="section-heading compact">
+        <div><p class="section-kicker">02 / LIVE DEMO</p><h2>四个可操作的技术切面。</h2></div>
+      </div>
+      <div class="demo-tabs" role="tablist" aria-label="Demo 模块">
+        <button type="button" role="tab" aria-selected="true" data-tab="agent"><span>01</span>内容 Agent<small>Research → Draft → Review</small></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="library"><span>02</span>教材 RAG<small>Local OCR → Human approval</small></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="rag"><span>03</span>合成基准 RAG<small>BGE → ChromaDB → Top-3</small></button>
+        <button type="button" role="tab" aria-selected="false" data-tab="trends"><span>04</span>趋势雷达<small>Visible browser → Local store</small></button>
+      </div>
+      <div class="demo-workspace">
+        <section class="demo-panel" data-tab-panel="agent">
+          <div class="workspace-intro"><div><p class="workspace-label">CONTENT RESEARCH AGENT</p><h3>从问题到可审核的小红书内容包</h3><p>后端会规划查询、检索与排序来源、生成内容，并执行引用和审批规则。</p></div><div class="runtime-badges"><span>2 search plans</span><span>5 carousel cards</span><span>0 auto-publish</span></div></div>
+          <form id="draftForm" class="control-card draft-form">
+            <label for="topicInput">主题 / 问题</label><textarea id="topicInput" maxlength="300" required>空腹有氧真的比普通有氧更减脂吗？</textarea>
+            <div class="draft-options"><label>目标读者<select id="audienceInput"><option>健身初学者</option><option>有训练经验的普通用户</option><option>关注减脂的年轻人</option></select></label><label>表达语气<select id="toneInput"><option>清晰、克制、友好</option><option>轻松但不夸张</option><option>专业、简洁</option></select></label></div>
+            <button class="run-button" id="draftButton" type="submit"><span>运行研究与生成流程</span><b>RUN ↗</b></button>
+          </form>
+          <div id="draftLoading" class="process-trace" hidden aria-live="polite"><span class="trace-dot"></span><strong>Agent 正在工作</strong><span>规划查询</span><i>→</i><span>检索来源</span><i>→</i><span>生成草稿</span><i>→</i><span>检查引用</span></div>
+          <section id="draftPanel" class="output-panel" hidden aria-live="polite">
+            <div class="output-heading"><div><p class="workspace-label">AGENT OUTPUT / REVIEW GATE</p><h3 id="draftTitle"></h3></div><span id="draftStatus" class="status-chip">DRAFT</span></div>
+            <div class="draft-layout"><article class="post-preview"><pre id="draftBody"></pre><div id="draftHashtags" class="hashtags"></div></article><aside class="review-card"><span class="review-lock">HUMAN GATE</span><h3>人工确认后才能导出</h3><ul id="reviewFlags"></ul><label class="approval-check"><input type="checkbox" id="sourceAcknowledgement">我已打开并检查原始来源</label><button type="button" id="approveButton" class="review-button">批准草稿</button><a id="exportLink" class="export-link disabled" href="#">导出文本包</a></aside></div>
+            <h3 class="subheading">五卡轮播脚本</h3><div id="carouselCards" class="carousel-cards"></div>
+            <div class="source-heading"><h3>学术来源</h3><p>摘要与元数据用于发现线索；批准前仍需打开论文原页。</p></div><div id="sourceList" class="source-list"></div>
+          </section>
+        </section>
+
+        <section class="demo-panel" data-tab-panel="library" hidden>
+          <div class="workspace-intro"><div><p class="workspace-label">PRIVATE TEXTBOOK RETRIEVAL</p><h3>私有教材留在本地，证据保留页码</h3><p>字符 TF-IDF 检索 126 个 staging chunks，审核决定持久化到本地 SQLite。</p></div><div class="runtime-badges"><span>Local only</span><span>Printed-page citation</span><span>Approved-only index</span></div></div>
+          <form id="libraryForm" class="control-card library-form"><label for="libraryQuery">训练或营养问题</label><div class="inline-controls"><input id="libraryQuery" maxlength="300" value="抗阻训练计划包含哪些设计变量？" required><button type="submit">检索本地教材 ↗</button></div><div class="review-toolbar"><button type="button" id="loadReviewQueue">加载 12 条审核队列</button><span id="reviewSummary">正在读取审核状态…</span></div></form>
+          <div id="libraryResults" class="library-results" hidden></div>
+        </section>
+
+        <section class="demo-panel" data-tab-panel="rag" hidden>
+          <div class="workspace-intro"><div><p class="workspace-label">SYNTHETIC RETRIEVAL BENCHMARK</p><h3>把一条健身主张映射到 Top-3 相关语境</h3><p>该模块用于验证检索系统，不把合成语料包装成医学证据。</p></div><div class="runtime-badges"><span>BAAI/bge-small-zh-v1.5</span><span>512 dimensions</span><span>Cosine top-k=3</span></div></div>
+          <form id="claimForm" class="control-card claim-form"><label for="claimInput">待分析主张</label><textarea id="claimInput" maxlength="1000" required>Stop eating carbohydrates after 6 PM and wear a sweat suit during cardio—you will burn belly fat twice as fast in one week.</textarea><div class="form-footer"><div class="examples"><button type="button" class="example-chip" data-claim="Deep squats always destroy your knees, so your knees must never pass your toes.">深蹲伤膝</button><button type="button" class="example-chip" data-claim="Women should avoid heavy weights because lifting makes them bulky almost immediately.">女性与力量训练</button><button type="button" class="example-chip" data-claim="BCAA supplements are essential after every workout or your muscles will become catabolic.">BCAA 主张</button></div><button class="run-button compact-button" id="analyzeButton" type="submit"><span>运行证据检索</span><b>RUN ↗</b></button></div></form>
+          <div id="loadingPanel" class="process-trace" hidden aria-live="polite"><span class="trace-dot"></span><strong>RAG 正在工作</strong><span>Embedding</span><i>→</i><span>ChromaDB query</span><i>→</i><span>Expert routing</span></div>
+          <section id="resultPanel" class="output-panel" hidden aria-live="polite">
+            <div class="verdict-grid"><article class="verdict-card"><div class="verdict-topline"><span id="verdictBadge" class="verdict-badge">SYNTHETIC CORPUS</span><span id="riskBadge" class="risk-badge">HIGH RISK</span></div><h2 id="resultVerdict">Related synthetic rebuttal retrieved</h2><p id="resultSummary" class="result-summary"></p><div class="reasoning"><span>OUTPUT LOGIC</span><p id="resultReasoning"></p></div></article><aside class="route-card"><span class="route-label">ROUTED TO</span><div class="expert-icon">EX</div><h3 id="expertLabel">Exercise Physiology</h3><p>由 Top-3 记录中的 expert metadata 多数投票决定。</p><span id="modeBadge" class="mode-badge">EXTRACTIVE MODE</span></aside></div>
+            <div class="source-heading evidence-heading"><div><p class="workspace-label">TOP-3 RETRIEVED CONTEXT</p><h3>查看相似度与匹配语境</h3></div><p>相似度来自 512 维 BGE embedding 的 cosine distance。</p></div><div id="evidenceList" class="evidence-list"></div><p class="provenance-note">这些记录是合成数据，只能说明检索相关性，不能证明医学正确性。</p>
+          </section>
+        </section>
+
+        <section class="demo-panel" data-tab-panel="trends" hidden>
+          <div class="workspace-intro"><div><p class="workspace-label">LOCAL XIAOHONGSHU TREND RADAR</p><h3>把“什么受欢迎”与“什么有证据”分开</h3><p>页面只读取手动收集并保存在本机的公开卡片；采集遇到登录或风控会立即停止。</p></div><div class="runtime-badges"><span>Visible Chrome</span><span>Hard result cap</span><span>No engagement action</span></div></div>
+          <form id="trendForm" class="control-card trend-form"><label for="trendKeyword">已采集关键词</label><div class="inline-controls"><input id="trendKeyword" maxlength="100" value="首页健身筛选" required><button type="submit">读取本地趋势 ↗</button></div><p class="form-note">本页面不会在后台启动采集器，也不会点赞、评论、关注或发布。</p></form>
+          <div id="trendResults" class="trend-results" hidden></div>
+        </section>
+      </div>
     </section>
 
-    <section id="draftPanel" class="draft-panel" hidden aria-live="polite">
-      <div class="draft-heading">
-        <div>
-          <div class="section-number">03 / REVIEW GATE</div>
-          <h2 id="draftTitle"></h2>
-        </div>
-        <span id="draftStatus" class="status-chip">DRAFT</span>
-      </div>
-      <div class="draft-layout">
-        <article class="post-preview">
-          <pre id="draftBody"></pre>
-          <div id="draftHashtags" class="hashtags"></div>
+    <section class="evaluation section-shell" id="evaluation">
+      <div class="section-heading"><div><p class="section-kicker">03 / EVALUATION</p><h2>技术选择由评测驱动，<br>不是由流行词驱动。</h2></div><p>同一个项目中，两类语料的性质不同，因此使用不同检索方案。所有指标都标明了评测对象与不能推出的结论。</p></div>
+      <div class="evaluation-grid">
+        <article class="benchmark-card">
+          <div class="benchmark-head"><div><span>BENCHMARK A</span><h3>3,000 条合成语料 · 固定留出集</h3></div><span class="winner-chip">DENSE WINS</span></div>
+          <div class="metric-row"><div><span>Topic-pair Hit@3</span><strong id="hitRate">—</strong></div><div class="bar-track"><span id="denseHitBar" class="bar-fill dense" style="--value:0%"></span></div><small>BGE + ChromaDB</small></div>
+          <div class="metric-row"><div><span>TF-IDF Hit@3</span><strong id="baselineRate">—</strong></div><div class="bar-track"><span id="baselineHitBar" class="bar-fill baseline" style="--value:0%"></span></div><small>Lexical baseline</small></div>
+          <div class="metric-foot"><span>300 held-out queries</span><span>+3.00 percentage points</span><span id="expertRate">— expert Hit@3</span></div>
         </article>
-        <aside class="review-card">
-          <h3>Human review required</h3>
-          <ul id="reviewFlags"></ul>
-          <label class="approval-check">
-            <input type="checkbox" id="sourceAcknowledgement">
-            I opened and checked the original sources.
-          </label>
-          <button type="button" id="approveButton" class="review-button">Approve draft</button>
-          <a id="exportLink" class="export-link disabled" href="#">Export text pack</a>
-        </aside>
+        <article class="benchmark-card">
+          <div class="benchmark-head"><div><span>BENCHMARK B</span><h3>私有教材 · 11-query 开发集</h3></div><span class="winner-chip blue">TF-IDF WINS</span></div>
+          <div class="metric-row"><div><span>Character TF-IDF page-range Hit@3</span><strong>100%</strong></div><div class="bar-track"><span class="bar-fill textbook" style="--value:100%"></span></div><small>当前本地 Demo 默认方案</small></div>
+          <div class="metric-row"><div><span>Dense page-range Hit@3</span><strong>81.82%</strong></div><div class="bar-track"><span class="bar-fill baseline" style="--value:81.82%"></span></div><small>同一开发集对照</small></div>
+          <div class="metric-foot"><span>Development pilot</span><span>非 held-out benchmark</span><span>不衡量 OCR 正确性</span></div>
+        </article>
       </div>
-      <h3 class="subheading">Five-card carousel script</h3>
-      <div id="carouselCards" class="carousel-cards"></div>
-      <div class="source-heading">
-        <h3>Academic sources</h3>
-        <p>PubMed abstracts and Crossref metadata are research leads, not substitutes for opening the original papers.</p>
-      </div>
-      <div id="sourceList" class="source-list"></div>
+      <div class="metric-disclaimer"><strong>指标解释边界</strong><p>合成语料指标衡量的是 topic-pair 检索相关性；教材指标衡量的是目标页范围能否进入 Top-3。它们都不等于答案质量、医学正确性或临床有效性。</p></div>
     </section>
 
-    <section class="analyzer" aria-labelledby="analyzerHeading">
-      <div class="section-number">04 / LEGACY RAG ANALYZER</div>
-      <div class="analyzer-grid">
-        <div>
-          <h2 id="analyzerHeading">Paste a suspicious fitness claim</h2>
-          <p class="field-help">Try a “miracle” fat-loss trick, training absolute, or supplement promise.</p>
-        </div>
-        <form id="claimForm">
-          <label class="sr-only" for="claimInput">Fitness claim</label>
-          <textarea id="claimInput" maxlength="1000" required>Stop eating carbohydrates after 6 PM and wear a sweat suit during cardio—you will burn belly fat twice as fast in one week.</textarea>
-          <div class="form-footer">
-            <div class="examples" aria-label="Example claims">
-              <button type="button" class="example-chip" data-claim="Deep squats always destroy your knees, so your knees must never pass your toes.">Knee myth</button>
-              <button type="button" class="example-chip" data-claim="Women should avoid heavy weights because lifting makes them bulky almost immediately.">Women + weights</button>
-              <button type="button" class="example-chip" data-claim="BCAA supplements are essential after every workout or your muscles will become catabolic.">BCAA claim</button>
-            </div>
-            <button class="analyze-button" id="analyzeButton" type="submit">
-              <span>Run evidence check</span>
-              <span aria-hidden="true">↗</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <section id="loadingPanel" class="loading-panel" hidden aria-live="polite">
-      <div class="scan-line"></div>
-      <p>Embedding claim · searching ChromaDB · routing expert</p>
-    </section>
-
-    <section id="resultPanel" class="results" hidden aria-live="polite">
-      <div class="section-number">04 / VERDICT</div>
-      <div class="verdict-grid">
-        <article class="verdict-card">
-          <div class="verdict-topline">
-            <span id="verdictBadge" class="verdict-badge">SYNTHETIC CORPUS</span>
-            <span id="riskBadge" class="risk-badge">HIGH RISK</span>
-          </div>
-          <h2 id="resultVerdict">Related synthetic rebuttal retrieved</h2>
-          <p id="resultSummary" class="result-summary"></p>
-          <div class="reasoning">
-            <span>WHY THIS OUTPUT</span>
-            <p id="resultReasoning"></p>
-          </div>
-        </article>
-        <aside class="route-card">
-          <span class="route-label">ROUTED TO</span>
-          <div class="expert-icon" aria-hidden="true">EX</div>
-          <h3 id="expertLabel">Exercise Physiology</h3>
-          <p>Selected from the expert labels of the top retrieved records.</p>
-          <span id="modeBadge" class="mode-badge">EXTRACTIVE MODE</span>
-        </aside>
-      </div>
-
-      <div class="evidence-heading">
-        <div>
-          <div class="section-number">05 / RETRIEVED SYNTHETIC CONTEXT</div>
-          <h2>Inspect the retrieved synthetic records</h2>
-        </div>
-        <p>Similarity is cosine similarity in the 512-dimensional BGE embedding space.</p>
-      </div>
-      <div id="evidenceList" class="evidence-list"></div>
-      <p class="provenance-note">Evidence records in this prototype are synthetically generated and are not a substitute for clinical guidance.</p>
-    </section>
-
-    <section class="method">
-      <div class="section-number">06 / MEASURED LEGACY SYSTEM</div>
-      <div class="method-title">
-        <h2>Nothing hidden behind the interface.</h2>
-        <p>The website and report read from the same configuration and evaluation artifact.</p>
-      </div>
-      <div class="pipeline" aria-label="RAG processing pipeline">
-        <div class="pipeline-step"><span>1</span><strong>Claim</strong><small>Raw social text</small></div>
-        <div class="pipeline-arrow">→</div>
-        <div class="pipeline-step"><span>2</span><strong>BGE-small</strong><small>512-d embedding</small></div>
-        <div class="pipeline-arrow">→</div>
-        <div class="pipeline-step"><span>3</span><strong>ChromaDB</strong><small>Cosine top-k = 3</small></div>
-        <div class="pipeline-arrow">→</div>
-        <div class="pipeline-step"><span>4</span><strong>Expert route</strong><small>Evidence metadata</small></div>
-        <div class="pipeline-arrow">→</div>
-        <div class="pipeline-step"><span>5</span><strong>Verdict</strong><small>Grounded response</small></div>
-      </div>
-      <div class="metrics-grid">
-        <article>
-          <span id="hitRate" class="metric-value">—</span>
-          <span class="metric-name">Dense topic-pair hit@3</span>
-        </article>
-        <article>
-          <span id="baselineRate" class="metric-value">—</span>
-          <span class="metric-name">TF–IDF topic-pair hit@3</span>
-        </article>
-        <article>
-          <span id="expertRate" class="metric-value">—</span>
-          <span class="metric-name">Dense expert hit@3</span>
-        </article>
-        <article>
-          <span class="metric-value">300</span>
-          <span class="metric-name">Held-out test claims</span>
-        </article>
+    <section class="scope section-shell" id="scope">
+      <div class="section-heading compact"><div><p class="section-kicker">04 / OWNERSHIP & SCOPE</p><h2>我实际完成了什么，<br>系统明确不做什么。</h2></div></div>
+      <div class="scope-grid">
+        <article class="ownership-card"><span>MY IMPLEMENTATION</span><h3>工程实现</h3><ul><li>FastAPI API 与 Pydantic 输入验证</li><li>PubMed / Crossref 检索适配与来源策略</li><li>BGE + ChromaDB 与 TF-IDF 双检索方案</li><li>OCR 质量门、页码追踪与本地审核状态</li><li>草稿状态机、引用检查和导出门</li><li>37 项自动化测试与 release guard</li></ul></article>
+        <article class="boundary-card"><span>EXPLICIT BOUNDARIES</span><h3>诚实边界</h3><ul><li>不是医疗诊断或临床验证系统</li><li>学术摘要只是检索线索，仍需查看原文</li><li>没有自动小红书发布与互动能力</li><li>没有把私有教材发送给第三方服务</li><li>尚未评测内容质量、成本、延迟和互动率</li><li>合成 benchmark 不代表真实世界医学知识库</li></ul></article>
+        <aside class="interview-card"><span>90-SECOND INTERVIEW ROUTE</span><ol><li><b>20s</b> 说明问题与工作流</li><li><b>35s</b> 运行内容 Agent</li><li><b>20s</b> 展示教材人工审核</li><li><b>15s</b> 用评测解释技术选型</li></ol><a href="#demo">从 Demo 开始 ↗</a></aside>
       </div>
     </section>
   </main>
 
-  <footer>
-    <span>FITNESS EVIDENCE STUDIO</span>
-    <span>Research draft prototype · human approval required · no auto-publishing</span>
-  </footer>
+  <footer><div><strong>Fitness Evidence Studio</strong><span>Research Agent · RAG · Human Review</span></div><p>Portfolio prototype by Lin Yuxuan · 健康信息仅用于研究与展示，不构成专业建议</p></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script src="/static/app.js"></script>
 </body>
 </html>

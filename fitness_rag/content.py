@@ -4,7 +4,7 @@ import json
 import os
 import re
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 from uuid import uuid4
 
 from .research import ResearchPacket, ResearchService
@@ -55,13 +55,23 @@ class ContentAgent:
     def create_draft(
         self,
         topic: str,
-        audience: str = "健身初学者",
-        tone: str = "清晰、克制、友好",
+        audience: str | None = None,
+        tone: str | None = None,
+        *,
+        language: Literal["en", "zh"] = "zh",
+        community_source_url: str | None = None,
     ) -> dict[str, Any]:
         packet = self.research_service.research(topic)
-        legacy_context = self._legacy_rag_context(topic)
+        english = language == "en"
+        if audience is None:
+            audience = "Fitness beginners" if english else "健身初学者"
+        if tone is None:
+            tone = "Clear, measured and friendly" if english else "清晰、克制、友好"
+        legacy_context = None if english else self._legacy_rag_context(topic)
         if self.generation_mode == "llm":
-            content = self._llm_draft(packet, audience, tone, legacy_context)
+            content = self._llm_draft(packet, audience, tone, legacy_context, language)
+        elif english:
+            content = self._english_template_draft(packet, audience, tone)
         else:
             content = self._template_draft(packet, audience, tone)
 
@@ -81,6 +91,8 @@ class ContentAgent:
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "status": "draft",
             "topic": packet.topic,
+            "language": language,
+            "community_source_url": community_source_url,
             "audience": _compact(audience, 120),
             "tone": _compact(tone, 120),
             "generation_mode": self.generation_mode,
@@ -94,7 +106,7 @@ class ContentAgent:
             },
             "publishing": {
                 "mode": "export_only",
-                "platform": "xiaohongshu",
+                "platform": "generic" if english else "xiaohongshu",
                 "note": "No content is posted automatically. Approval and export are separate actions.",
             },
         }
@@ -146,36 +158,73 @@ class ContentAgent:
         }
 
     @staticmethod
+    def _english_template_draft(
+        packet: ResearchPacket, audience: str, tone: str
+    ) -> dict[str, Any]:
+        source_lines = [
+            f"[S{index}] {_compact(source.snippet, 180)}"
+            for index, source in enumerate(packet.sources[:4], 1)
+        ]
+        evidence = "\n\n".join(source_lines) or "No usable research sources were found."
+        first_excerpt = f"[S1] {_compact(packet.sources[0].snippet, 120)}" if source_lines else evidence
+        return {
+            "title": _compact(packet.topic, 90),
+            "body": (
+                f"{packet.topic}\n\nResearch excerpts to check\n\n{evidence}\n\n"
+                "Open the original sources and check the study population, outcomes, and "
+                "limitations before drawing a conclusion."
+            ),
+            "hashtags": ["FitnessResearch", "EvidenceBasedFitness", "TrainingQuestions"],
+            "carousel": [
+                {"heading": "The question", "copy": _compact(packet.topic, 120)},
+                {"heading": "What the search found", "copy": first_excerpt},
+                {"heading": "Who does it apply to?", "copy": "Check which groups were studied and how they trained."},
+                {"heading": "What can we conclude?", "copy": "Compare the original sources before writing a practical takeaway."},
+                {"heading": "Sources and limitations", "copy": "Review the linked studies and document any uncertainty."},
+            ],
+            "audience_note": _compact(audience, 120),
+            "tone_note": _compact(tone, 120),
+        }
+
+    @staticmethod
     def _llm_draft(
         packet: ResearchPacket,
         audience: str,
         tone: str,
         legacy_context: dict[str, Any] | None,
+        language: Literal["en", "zh"],
     ) -> dict[str, Any]:
         from openai import OpenAI
 
         api_key = os.environ.get("CONTENT_API_KEY") or os.environ["DEEPSEEK_API_KEY"]
         base_url = os.environ.get("CONTENT_API_BASE", "https://api.deepseek.com")
         model = os.environ.get("CONTENT_MODEL", "deepseek-chat")
+        english = language == "en"
+        title_limit = 90 if english else 40
+        assignment = "an English fitness education draft" if english else "a Chinese Xiaohongshu draft"
+        editor_language = "English" if english else "Chinese"
+        legacy_section = "" if english else (
+            "Never turn the synthetic legacy RAG context into a citation or authoritative claim.\n\n"
+            f"Synthetic legacy RAG context (orientation only):\n{json.dumps(legacy_context, ensure_ascii=False)}"
+        )
         prompt = f"""
-Create a Chinese Xiaohongshu draft about: {packet.topic}
+Create {assignment} about: {packet.topic}
 Audience: {audience}
 Tone: {tone}
 
 Use only the web excerpts below for factual claims. Every factual paragraph must include
 one or more source markers such as [S1]. Do not treat search snippets as complete papers;
-state uncertainty and ask the reviewer to open the original URLs. Never turn the synthetic
-legacy RAG context into a citation or authoritative claim.
+state uncertainty and ask the reviewer to open the original URLs.
 
 Web evidence:
 {_source_context(packet)}
 
-Synthetic legacy RAG context (orientation only):
-{json.dumps(legacy_context, ensure_ascii=False)}
+{legacy_section}
 
 Return JSON with exactly these fields:
-title (string, <= 40 Chinese characters), body (string), hashtags (array of 3-6 strings),
+title (string, <= {title_limit} characters), body (string), hashtags (array of 3-6 strings),
 carousel (array of exactly 5 objects with string fields heading and copy).
+Write every field in {editor_language}.
 Avoid medical diagnosis, guaranteed outcomes, fear-based language, and invented statistics.
 """
         client = OpenAI(api_key=api_key, base_url=base_url, timeout=45.0)
@@ -184,7 +233,7 @@ Avoid medical diagnosis, guaranteed outcomes, fear-based language, and invented 
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a cautious evidence-grounded Chinese fitness content editor.",
+                    "content": f"You are a cautious evidence-grounded {editor_language} fitness content editor.",
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -198,7 +247,7 @@ Avoid medical diagnosis, guaranteed outcomes, fear-based language, and invented 
         if not isinstance(payload["carousel"], list) or len(payload["carousel"]) != 5:
             raise ValueError("Content model must return exactly five carousel cards.")
         return {
-            "title": _compact(str(payload["title"]), 40),
+            "title": _compact(str(payload["title"]), title_limit),
             "body": str(payload["body"]).strip(),
             "hashtags": [
                 _compact(str(value).lstrip("#"), 30)
