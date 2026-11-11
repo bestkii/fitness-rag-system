@@ -52,15 +52,20 @@ python -m uvicorn app:app --host 127.0.0.1 --port 8010
 
 Open the English workbench, generate a draft, and verify the original sources
 before approving it. Write the post, select at least one research link, and
-check the exact preview and destination account. **Publish to Bluesky** sends
-the preview as one public post. The displayed source labels become clickable
-research links. Text export is also available.
+enter the misconception and its evidence-backed clarification. The browser
+renders a square JPEG and derives alternative text as you type. New cards use
+red and black, gold and black, then blue and black in rotation.
+
+Check the exact text, card, and destination account. **Publish with image**
+uploads the previewed JPEG and publishes it with the post and clickable research
+links in one action. Text export is also available.
 
 The workbench saves the draft link in the browser address bar. Open that link
 again to see the publishing status or public permalink. If Bluesky does not
 confirm the first request, retry the saved preview. The app checks the original
-record key before retrying the write. Publishing receipts are stored in the
-ignored local `runtime/bluesky_publications.sqlite3` database.
+record key before retrying the write and reuses the saved card. Publishing
+receipts and reviewed card images are stored in the ignored local
+`runtime/bluesky_publications.sqlite3` database.
 
 ## Read-only Xiaohongshu trend collector
 

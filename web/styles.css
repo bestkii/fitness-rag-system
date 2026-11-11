@@ -160,6 +160,9 @@ code { color: var(--blue); font-family: var(--mono); }
 .bluesky-panel pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; min-height: 50px; padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bluesky-panel .review-button { width: auto; }
 .bluesky-panel a { color: var(--lime); }
+.bluesky-panel figure { margin: 16px 0; max-width: 480px; }
+.bluesky-panel figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
+.bluesky-panel figcaption { color: var(--muted); margin-top: 6px; }
 .demo-tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
 .demo-tabs button { background: var(--surface); border: 1px solid var(--line); color: var(--muted); display: grid; gap: 5px; min-height: 92px; padding: 18px; text-align: left; transition: background .2s, color .2s; }
 .demo-tabs button:first-child { border-radius: 12px 0 0 0; }

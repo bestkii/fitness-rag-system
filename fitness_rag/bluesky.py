@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import os
 import re
@@ -7,6 +9,7 @@ import secrets
 import sqlite3
 import time
 from contextlib import closing
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from http.client import HTTPException
 from pathlib import Path
@@ -18,7 +21,13 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 SERVICE = "https://bsky.social"
 COLLECTION = "app.bsky.feed.post"
 MAX_POST_LENGTH = 300
+MAX_CARD_BYTES = 1_000_000
+CARD_PALETTES = ("red", "gold", "blue")
 TID_ALPHABET = "234567abcdefghijklmnopqrstuvwxyz"
+PUBLICATION_QUERY = """
+    SELECT p.*, c.jpeg, c.alt, c.palette FROM bluesky_publications p
+    LEFT JOIN bluesky_cards c USING (draft_id) WHERE p.draft_id = ?
+"""
 
 
 class PublishError(RuntimeError):
@@ -44,7 +53,10 @@ class NoRedirect(HTTPRedirectHandler):
         return None
 
 
-def _rpc(service: str, method: str, *, token: str = "", body: dict | None = None, query: dict | None = None) -> dict:
+def _rpc(
+    service: str, method: str, *, token: str = "", body: dict | None = None,
+    query: dict | None = None, jpeg: bytes | None = None,
+) -> dict:
     url = f"{service}/xrpc/{method}"
     if query:
         url = f"{url}?{urlencode(query)}"
@@ -52,7 +64,10 @@ def _rpc(service: str, method: str, *, token: str = "", body: dict | None = None
     if token:
         headers["Authorization"] = f"Bearer {token}"
     data = None
-    if body is not None:
+    if jpeg is not None:
+        headers["Content-Type"] = "image/jpeg"
+        data = jpeg
+    elif body is not None:
         headers["Content-Type"] = "application/json"
         data = json.dumps(body).encode()
     try:
@@ -125,6 +140,23 @@ class BlueskyClient:
             "validate": True,
         })
 
+    def upload_card(self, jpeg: bytes) -> dict:
+        response = _rpc(
+            self.service, "com.atproto.repo.uploadBlob", token=self.token, jpeg=jpeg
+        )
+        blob = response.get("blob")
+        if (
+            not isinstance(blob, dict)
+            or blob.get("$type") != "blob"
+            or not isinstance(blob.get("ref"), dict)
+            or not isinstance(blob["ref"].get("$link"), str)
+            or not blob["ref"]["$link"]
+            or blob.get("mimeType") != "image/jpeg"
+            or blob.get("size") != len(jpeg)
+        ):
+            raise BlueskyRequestError()
+        return blob
+
 
 def configured_account() -> str | None:
     handle = os.environ.get("BLUESKY_HANDLE", "").strip().lower()
@@ -178,6 +210,36 @@ def compose_post(draft: dict, text: str, sources: list[int]) -> dict:
     return {"$type": COLLECTION, "text": text, "langs": ["en"], "facets": facets}
 
 
+@dataclass(frozen=True)
+class PostCard:
+    jpeg: bytes
+    alt: str
+    palette: str
+
+    @classmethod
+    def decode(cls, encoded: str, alt: str, palette: str) -> PostCard:
+        alt = alt.strip()
+        if not alt or len(alt) > 600 or palette not in CARD_PALETTES:
+            raise PublishError(422, "The card needs alternative text and a supported palette.")
+        if len(encoded) > ((MAX_CARD_BYTES + 2) // 3) * 4:
+            raise PublishError(422, "The card must be a JPEG no larger than 1 MB.")
+        try:
+            jpeg = base64.b64decode(encoded, validate=True)
+        except (ValueError, binascii.Error):
+            raise PublishError(422, "The card could not be decoded.") from None
+        if (
+            len(jpeg) > MAX_CARD_BYTES
+            or not jpeg.startswith(b"\xff\xd8\xff")
+            or not jpeg.endswith(b"\xff\xd9")
+        ):
+            raise PublishError(422, "The card must be a JPEG no larger than 1 MB.")
+        return cls(jpeg, alt, palette)
+
+
+def _saved_card(row: dict) -> PostCard | None:
+    return PostCard(row["jpeg"], row["alt"], row["palette"]) if row["jpeg"] else None
+
+
 class PublicationStore:
     def __init__(self, path: Path):
         self.path = path
@@ -199,22 +261,39 @@ class PublicationStore:
                 UNIQUE (did, record_key)
             )
         """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS bluesky_cards (
+                draft_id TEXT PRIMARY KEY,
+                jpeg BLOB NOT NULL,
+                alt TEXT NOT NULL,
+                palette TEXT NOT NULL
+            )
+        """)
         return connection
 
     def get(self, draft_id: str) -> dict | None:
         with closing(self._connect()) as connection:
-            row = connection.execute(
-                "SELECT * FROM bluesky_publications WHERE draft_id = ?", (draft_id,)
-            ).fetchone()
+            row = connection.execute(PUBLICATION_QUERY, (draft_id,)).fetchone()
         return dict(row) if row else None
 
-    def reserve(self, draft_id: str, did: str, account: str, record: dict) -> dict:
+    @staticmethod
+    def _next_palette(connection: sqlite3.Connection) -> str:
+        count = connection.execute("SELECT COUNT(*) FROM bluesky_cards").fetchone()[0]
+        return CARD_PALETTES[count % len(CARD_PALETTES)]
+
+    def next_palette(self) -> str:
+        with closing(self._connect()) as connection:
+            return self._next_palette(connection)
+
+    def reserve(
+        self, draft_id: str, did: str, account: str, record: dict, card: PostCard | None
+    ) -> dict:
         with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
-            row = connection.execute(
-                "SELECT * FROM bluesky_publications WHERE draft_id = ?", (draft_id,)
-            ).fetchone()
+            row = connection.execute(PUBLICATION_QUERY, (draft_id,)).fetchone()
             if row is None:
+                if card is not None and card.palette != self._next_palette(connection):
+                    raise PublishError(409, "The next palette changed. Review the updated preview before publishing.")
                 key = _record_key()
                 serialized = json.dumps({
                     **record,
@@ -225,11 +304,27 @@ class PublicationStore:
                     VALUES (?, ?, ?, ?, ?)""",
                     (draft_id, did, account, key, serialized),
                 )
-                return {
-                    "draft_id": draft_id, "did": did, "account": account,
-                    "record_key": key, "record": serialized, "uri": None, "cid": None, "permalink": None,
-                }
+                if card is not None:
+                    connection.execute(
+                        "INSERT INTO bluesky_cards (draft_id, jpeg, alt, palette) VALUES (?, ?, ?, ?)",
+                        (draft_id, card.jpeg, card.alt, card.palette),
+                    )
+                row = connection.execute(PUBLICATION_QUERY, (draft_id,)).fetchone()
         return dict(row)
+
+    def save_card_embed(self, draft_id: str, embed: dict) -> dict:
+        with closing(self._connect()) as connection, connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(PUBLICATION_QUERY, (draft_id,)).fetchone()
+            record = json.loads(row["record"])
+            if "embed" in record and record["embed"] != embed:
+                raise PublishError(409, "The uploaded image differs from the saved post.")
+            record["embed"] = embed
+            connection.execute(
+                "UPDATE bluesky_publications SET record = ? WHERE draft_id = ?",
+                (json.dumps(record), draft_id),
+            )
+        return record
 
     def confirm(self, draft_id: str, uri: str, cid: str, permalink: str) -> dict:
         with closing(self._connect()) as connection, connection:
@@ -248,6 +343,13 @@ def publication_status(row: dict | None) -> dict:
             record=json.loads(row["record"]),
             state="published" if row["uri"] else "pending",
         )
+        card = _saved_card(row)
+        if card is not None:
+            status["card"] = {
+                "jpeg": base64.b64encode(card.jpeg).decode("ascii"),
+                "alt": card.alt,
+                "palette": card.palette,
+            }
         if row["uri"]:
             status.update(
                 uri=row["uri"],
@@ -258,7 +360,8 @@ def publication_status(row: dict | None) -> dict:
 
 
 def publish_draft(
-    store: PublicationStore, draft: dict, account: str, text: str | None, sources: list[int]
+    store: PublicationStore, draft: dict, account: str, text: str | None,
+    sources: list[int], card: PostCard | None = None,
 ) -> dict:
     if draft.get("language") != "en" or draft.get("status") != "approved":
         raise PublishError(409, "Approve an English draft before publishing.")
@@ -273,27 +376,39 @@ def publish_draft(
         raise PublishError(409, "The project account changed. Reload and review the post before publishing.")
     if text is None and previous:
         requested = json.loads(previous["record"])
+        card = _saved_card(previous)
     else:
         requested = compose_post(draft, text or "", sources)
     client = BlueskyClient(configured, os.environ["BLUESKY_APP_PASSWORD"])
-    row = store.reserve(draft_id, client.did, configured, requested)
+    row = store.reserve(draft_id, client.did, configured, requested, card)
     if row["did"] != client.did:
         raise PublishError(409, "This publishing attempt belongs to a different Bluesky account.")
     if row["uri"]:
         return publication_status(row)
     record = json.loads(row["record"])
-    if any(record[field] != value for field, value in requested.items()):
+    if (
+        any(record.get(field) != value for field, value in requested.items())
+        or _saved_card(row) != card
+    ):
         raise PublishError(409, "A post is pending. Retry the same reviewed preview.")
 
     key = row["record_key"]
     receipt = client.get(key)
     if receipt is None:
+        if card is not None:
+            blob = client.upload_card(card.jpeg)
+            record = store.save_card_embed(draft_id, {
+                "$type": "app.bsky.embed.images",
+                "images": [{"image": blob, "alt": card.alt}],
+            })
         try:
             receipt = client.create(key, record)
         except BlueskyRequestError:
             receipt = client.get(key)
             if receipt is None:
                 raise
+    elif card is not None and "embed" not in record:
+        record = json.loads(store.get(draft_id)["record"])
     if "value" in receipt and receipt["value"] != record:
         raise PublishError(409, "The Bluesky record differs from the reviewed post.")
     expected_uri = f"at://{client.did}/{COLLECTION}/{key}"

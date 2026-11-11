@@ -9,7 +9,9 @@ from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-from fitness_rag.bluesky import PublicationStore, PublishError, publication_status, publish_draft
+from fitness_rag.bluesky import (
+    MAX_CARD_BYTES, PostCard, PublicationStore, PublishError, publication_status, publish_draft,
+)
 from fitness_rag.community import load_community_questions
 from fitness_rag.config import APP_NAME, DRAFTS_DIR, ROOT, RUNTIME_DIR
 from fitness_rag.content import ContentAgent
@@ -79,10 +81,17 @@ class ApprovalRequest(BaseModel):
     acknowledged_sources: bool
 
 
+class BlueskyCardRequest(BaseModel):
+    jpeg: str = Field(min_length=1, max_length=((MAX_CARD_BYTES + 2) // 3) * 4)
+    alt: str = Field(min_length=1, max_length=600)
+    palette: Literal["red", "gold", "blue"]
+
+
 class BlueskyPublishRequest(BaseModel):
     account: str = Field(min_length=1, max_length=253)
     text: str | None = Field(default=None, max_length=300)
     sources: list[int] = Field(default_factory=list, max_length=6)
+    card: BlueskyCardRequest | None = None
 
 
 class PrivateReviewRequest(BaseModel):
@@ -298,7 +307,10 @@ def require_local_publishing(request: Request) -> None:
 def bluesky_status(draft_id: str, request: Request) -> dict:
     require_local_publishing(request)
     get_content_draft(draft_id)
-    return publication_status(publication_store.get(draft_id))
+    status = publication_status(publication_store.get(draft_id))
+    if status["state"] == "ready":
+        status["next_palette"] = publication_store.next_palette()
+    return status
 
 
 @app.post("/api/content/drafts/{draft_id}/publish/bluesky")
@@ -306,7 +318,8 @@ def publish_to_bluesky(draft_id: str, request: Request, post: BlueskyPublishRequ
     require_local_publishing(request)
     draft = get_content_draft(draft_id)
     try:
-        return publish_draft(publication_store, draft, post.account, post.text, post.sources)
+        card = PostCard.decode(post.card.jpeg, post.card.alt, post.card.palette) if post.card else None
+        return publish_draft(publication_store, draft, post.account, post.text, post.sources, card)
     except PublishError as exc:
         raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
 
