@@ -152,6 +152,14 @@ code { color: var(--blue); font-family: var(--mono); }
 .community-questions li { align-items: center; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 12px; padding: 10px 0; }
 .community-questions li span { flex: 1 1 14rem; }
 .community-questions a, #attachedCommunityLink, #draftCommunityLink { color: var(--lime); }
+.bluesky-panel { margin-top: 24px; }
+.bluesky-panel h3 { margin-top: 0; }
+.bluesky-panel textarea { width: 100%; margin-block: 8px 16px; }
+.bluesky-panel fieldset { border: 1px solid var(--line); margin: 0 0 16px; }
+.bluesky-panel fieldset label { display: flex; gap: 8px; margin-block: 8px; }
+.bluesky-panel pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; min-height: 50px; padding: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bluesky-panel .review-button { width: auto; }
+.bluesky-panel a { color: var(--lime); }
 .demo-tabs { display: grid; grid-template-columns: repeat(4, 1fr); }
 .demo-tabs button { background: var(--surface); border: 1px solid var(--line); color: var(--muted); display: grid; gap: 5px; min-height: 92px; padding: 18px; text-align: left; transition: background .2s, color .2s; }
 .demo-tabs button:first-child { border-radius: 12px 0 0 0; }

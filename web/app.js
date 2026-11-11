@@ -335,6 +335,11 @@ draftForm.addEventListener("submit", async (event) => {
       }),
     });
     renderDraft(payload);
+    if (communityPanel) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("draft", payload.id);
+      window.history.replaceState(null, "", url);
+    }
     draftPanel.hidden = false;
     draftPanel.scrollIntoView({ behavior: "smooth", block: "start" });
     showToast(t("draftReady"));
@@ -408,6 +413,23 @@ function renderDraft(payload) {
   exportLink.classList.toggle("disabled", !approved);
   exportLink.setAttribute("aria-disabled", String(!approved));
   exportLink.onclick = approved ? null : (event) => event.preventDefault();
+  if (communityPanel) renderBlueskyDraft(payload, requestJson);
+}
+
+async function restoreEnglishDraft() {
+  const id = new URLSearchParams(window.location.search).get("draft");
+  if (!id) return;
+  try {
+    const draft = await requestJson(`/api/content/drafts/${encodeURIComponent(id)}`);
+    if (draft.language !== "en") throw new Error("This draft belongs to the Chinese workspace.");
+    if (currentDraftId) return;
+    topicInput.value = draft.topic;
+    attachCommunitySource(draft.community_source_url);
+    renderDraft(draft);
+    draftPanel.hidden = false;
+  } catch (error) {
+    showToast(error.message, "error");
+  }
 }
 
 document.querySelectorAll(".example-chip").forEach((chip) => {
@@ -471,4 +493,7 @@ function escapeAttribute(value) {
 
 initialize();
 if (libraryForm) refreshReviewSummary();
-if (communityPanel) setupCommunityQuestions();
+if (communityPanel) {
+  setupCommunityQuestions();
+  restoreEnglishDraft();
+}

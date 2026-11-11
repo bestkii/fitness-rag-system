@@ -51,6 +51,22 @@
             <h3 class="subheading">Five-card carousel script</h3><div id="carouselCards" class="carousel-cards"></div>
             <p id="draftCommunitySource" class="form-note" hidden>Community topic source: <a id="draftCommunityLink" target="_blank" rel="noopener noreferrer">Open original post</a></p>
             <div class="source-heading"><h3>Academic sources</h3><p>Abstracts and metadata support discovery; reviewers must still open the original papers before approval.</p></div><div id="sourceList" class="source-list"></div>
+            <section id="blueskyPanel" class="control-card bluesky-panel" aria-labelledby="blueskyHeading" hidden>
+              <h3 id="blueskyHeading">Publish to Bluesky</h3>
+              <form id="blueskyForm">
+                <div id="blueskyEditor">
+                  <label for="blueskyText">English post text</label>
+                  <textarea id="blueskyText" maxlength="600" rows="4" placeholder="Write the takeaway and its main limitation."></textarea>
+                  <fieldset id="blueskySources"><legend>Research links to include</legend></fieldset>
+                </div>
+                <p id="blueskyPreviewLabel">Public post preview</p>
+                <pre id="blueskyPreview" aria-labelledby="blueskyPreviewLabel"></pre>
+                <p id="blueskyCount" class="form-note"></p>
+                <p id="blueskyStatus" role="status"></p>
+                <button type="submit" id="blueskyPublish" class="review-button" disabled>Publish to Bluesky</button>
+                <a id="blueskyPermalink" target="_blank" rel="noopener noreferrer" hidden>Open published post</a>
+              </form>
+            </section>
           </section>
         </section>
       </div>
@@ -76,7 +92,7 @@
           <div class="console-node" id="ragNode"><span>03</span><div><strong>Retrieval benchmarks</strong><small id="ragState">Separate retrieval benchmarks</small></div></div><div class="console-line"></div>
           <div class="console-node" id="reviewNode"><span>04</span><div><strong>Review gate</strong><small id="booksState">Source review before export</small></div></div>
         </div>
-        <div class="console-foot"><span>OUTPUT</span><strong>A reviewable content pack — never an automatic post</strong></div>
+        <div class="console-foot"><span>OUTPUT</span><strong>A reviewable content pack and optional Bluesky post</strong></div>
       </aside>
     </section>
 
@@ -100,11 +116,11 @@
         <div class="flow-connector" aria-hidden="true">→</div>
         <article class="architecture-card accent-orange"><div class="card-index">04 / GENERATE</div><div class="card-icon">✦</div><h3>Structured generation</h3><p>Produces a title, body, five-card script, source markers and review warnings. The English template works without a model key.</p><div class="tech-tags"><span>DeepSeek optional</span><span>Template fallback</span></div></article>
         <div class="flow-connector" aria-hidden="true">→</div>
-        <article class="architecture-card accent-red"><div class="card-index">05 / APPROVE</div><div class="card-icon">✓</div><h3>Human approval gate</h3><p>Approval and export remain blocked until original-source review is acknowledged. The system has no automatic posting action.</p><div class="tech-tags"><span>Pydantic</span><span>State machine</span><span>Guardrails</span></div></article>
+        <article class="architecture-card accent-red"><div class="card-index">05 / APPROVE</div><div class="card-icon">✓</div><h3>Human approval gate</h3><p>Review the original sources before approving a draft. The English workbench can then export it or publish an explicitly reviewed Bluesky preview.</p><div class="tech-tags"><span>Pydantic</span><span>State machine</span><span>AT Protocol</span></div></article>
       </div>
       <div class="engineering-grid">
         <article><span>DECISION 01</span><h3>Why two retrievers?</h3><p>This is an evaluation decision, not technology stacking. Dense retrieval won on the synthetic benchmark; character TF-IDF reached 100% page-range Hit@3 on the small textbook development set.</p></article>
-        <article><span>DECISION 02</span><h3>Why no automatic publishing?</h3><p>Health content requires human judgment about sources and wording. The product state machine allows only <code>draft → approved → export</code>, with no publish action.</p></article>
+        <article><span>DECISION 02</span><h3>How does publishing work?</h3><p>Draft approval unlocks a separate post preview. The editor reviews its exact wording and research links before sending it to Bluesky.</p></article>
         <article><span>DECISION 03</span><h3>How is private material protected?</h3><p>Textbook PDFs, OCR text, vector data and review records stay in ignored local directories. They never enter web search or cloud-generation context.</p></article>
       </div>
     </section>
@@ -140,6 +156,7 @@
 
   <footer><div><strong>Fitness Evidence Studio</strong><span>Research Agent · RAG · Human Review</span></div><p>Portfolio prototype by Lin Yuxuan · For research and demonstration only; not professional health advice</p></footer>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script src="/static/bluesky.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

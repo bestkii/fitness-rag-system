@@ -4,13 +4,14 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
+from fitness_rag.bluesky import PublicationStore, PublishError, publication_status, publish_draft
 from fitness_rag.community import load_community_questions
-from fitness_rag.config import APP_NAME, DRAFTS_DIR, ROOT
+from fitness_rag.config import APP_NAME, DRAFTS_DIR, ROOT, RUNTIME_DIR
 from fitness_rag.content import ContentAgent
 from fitness_rag.drafts import DraftNotApprovedError, DraftNotFoundError, DraftStore
 from fitness_rag.private_retrieval import PrivateTextbookRetriever
@@ -27,6 +28,7 @@ private_retriever: PrivateTextbookRetriever | None = None
 private_review_store = PrivateReviewStore()
 private_source_registry = PrivateSourceRegistry()
 draft_store = DraftStore(DRAFTS_DIR)
+publication_store = PublicationStore(RUNTIME_DIR / "bluesky_publications.sqlite3")
 topic_store = XiaohongshuTopicStore()
 search_provider = default_search_provider()
 
@@ -75,6 +77,12 @@ class DraftRequest(BaseModel):
 
 class ApprovalRequest(BaseModel):
     acknowledged_sources: bool
+
+
+class BlueskyPublishRequest(BaseModel):
+    account: str = Field(min_length=1, max_length=253)
+    text: str | None = Field(default=None, max_length=300)
+    sources: list[int] = Field(default_factory=list, max_length=6)
 
 
 class PrivateReviewRequest(BaseModel):
@@ -272,6 +280,35 @@ def export_content_draft(draft_id: str) -> str:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except DraftNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Draft not found.") from exc
+
+
+def require_local_publishing(request: Request) -> None:
+    loopback = {"localhost", "127.0.0.1", "::1"}
+    origin = request.headers.get("origin")
+    if (
+        request.client is None
+        or request.client.host not in loopback
+        or request.url.hostname not in loopback
+        or (origin is not None and origin != str(request.base_url).rstrip("/"))
+    ):
+        raise HTTPException(status_code=403, detail="Bluesky publishing is available only in the local workbench.")
+
+
+@app.get("/api/content/drafts/{draft_id}/publish/bluesky")
+def bluesky_status(draft_id: str, request: Request) -> dict:
+    require_local_publishing(request)
+    get_content_draft(draft_id)
+    return publication_status(publication_store.get(draft_id))
+
+
+@app.post("/api/content/drafts/{draft_id}/publish/bluesky")
+def publish_to_bluesky(draft_id: str, request: Request, post: BlueskyPublishRequest) -> dict:
+    require_local_publishing(request)
+    draft = get_content_draft(draft_id)
+    try:
+        return publish_draft(publication_store, draft, post.account, post.text, post.sources)
+    except PublishError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
 
 
 if __name__ == "__main__":

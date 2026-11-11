@@ -22,7 +22,7 @@ editorial question -> two planned PubMed/Crossref searches -> deduplicate + topi
       -> source-tier ranking
       -> research packet
       -> template or LLM draft -> citation checks -> human review
-      -> approval -> text export
+      -> approval -> text export or reviewed Bluesky post
 ```
 
 The research path uses the free PubMed E-utilities and Crossref REST API by
@@ -36,6 +36,31 @@ leads. Reviewers must open the original URLs before approval; excerpts are not
 treated as complete papers. Runtime drafts are stored under the ignored `runtime/`
 directory. Queries with a known ambiguity, such as fasted cardio, also require
 every retained source to match the defining topic concepts before drafting.
+
+## Publish a reviewed English post to Bluesky
+
+Use a dedicated account hosted by Bluesky and create an app password in its
+settings. From the Agent checkout, configure the account in the local server
+process. In PowerShell 7, the masked prompt keeps the password out of shell
+history.
+
+```powershell
+$env:BLUESKY_HANDLE = Read-Host 'Project Bluesky handle (without @)'
+$env:BLUESKY_APP_PASSWORD = Read-Host 'Project Bluesky app password' -MaskInput
+python -m uvicorn app:app --host 127.0.0.1 --port 8010
+```
+
+Open the English workbench, generate a draft, and verify the original sources
+before approving it. Write the post, select at least one research link, and
+check the exact preview and destination account. **Publish to Bluesky** sends
+the preview as one public post. The displayed source labels become clickable
+research links. Text export is also available.
+
+The workbench saves the draft link in the browser address bar. Open that link
+again to see the publishing status or public permalink. If Bluesky does not
+confirm the first request, retry the saved preview. The app checks the original
+record key before retrying the write. Publishing receipts are stored in the
+ignored local `runtime/bluesky_publications.sqlite3` database.
 
 ## Read-only Xiaohongshu trend collector
 
@@ -181,6 +206,8 @@ open the homepage and use **Create a sourced draft**. The API endpoints are:
 - `GET /api/content/drafts/{id}`: inspect a persisted draft
 - `POST /api/content/drafts/{id}/approve`: acknowledge source review
 - `GET /api/content/drafts/{id}/export`: export the text pack
+- `GET /api/content/drafts/{id}/publish/bluesky`: read local publishing availability and receipt
+- `POST /api/content/drafts/{id}/publish/bluesky`: publish the reviewed English post or retry its saved record
 - `GET /api/trends?keyword=空腹有氧`: inspect locally collected public cards
 
 See `PORTFOLIO_DEMO.md` for the recruiter-facing demo flow.
