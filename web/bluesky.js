@@ -6,8 +6,12 @@ const renderBlueskyDraft = (() => {
   const sources = document.querySelector("#blueskySources");
   const preview = document.querySelector("#blueskyPreview");
   const count = document.querySelector("#blueskyCount");
-  const myth = document.querySelector("#blueskyMyth");
-  const clarification = document.querySelector("#blueskyClarification");
+  const visualEditor = document.querySelector("#blueskyCardEditor");
+  const visualFields = [...visualEditor.querySelectorAll("[data-visual-text]")];
+  const photoInput = document.querySelector("#visualPhoto");
+  const removePhoto = document.querySelector("#removeVisualPhoto");
+  const photoDescription = document.querySelector("#visualPhotoDescription");
+  const photoAlt = document.querySelector("#visualPhotoAlt");
   const cardFigure = document.querySelector("#blueskyCardFigure");
   const cardPreview = document.querySelector("#blueskyCardPreview");
   const cardPalette = document.querySelector("#blueskyCardPalette");
@@ -99,13 +103,23 @@ const renderBlueskyDraft = (() => {
 
   function previewCard(publication) {
     if (publication?.state !== "ready") return publication?.card ?? null;
-    const mythText = myth.value.trim().replace(/\s+/g, " ");
-    const clarificationText = clarification.value.trim().replace(/\s+/g, " ");
+    if (active.photoLoading) throw new Error("Loading the supporting photo…");
+    if (active.photoError) throw new Error(active.photoError);
+    const values = visualFields.map((field) => field.value.trim().replace(/\s+/g, " "));
+    const [heading, firstValue, firstLabel, secondValue, secondLabel] = values;
+    const description = active.photo ? photoAlt.value.trim() : "";
     const palette = publication.next_palette;
-    if (!mythText || !clarificationText || !mythCardPalettes[palette]) return null;
-    const key = JSON.stringify([mythText, clarificationText, palette]);
+    if (values.some((value) => !value) || !mythCardPalettes[palette]) return null;
+    if (active.photo && !description) throw new Error("Describe the supporting photo before publishing.");
+    const key = JSON.stringify([values, description, palette]);
     if (key !== active.cardKey) {
-      active.card = drawMythCard(mythText, clarificationText, palette);
+      active.card = drawVisualExample({
+        heading,
+        first: { value: firstValue, label: firstLabel },
+        second: { value: secondValue, label: secondLabel },
+        photo: active.photo,
+        photoDescription: description,
+      }, palette);
       active.cardKey = key;
     }
     return active.card;
@@ -148,8 +162,9 @@ const renderBlueskyDraft = (() => {
     editor.hidden = state === "pending" || state === "published";
     input.disabled = submitting;
     sources.disabled = submitting;
-    myth.disabled = submitting;
-    clarification.disabled = submitting;
+    visualEditor.disabled = submitting;
+    removePhoto.hidden = !photoInput.files.length;
+    photoDescription.hidden = !active.photo;
     readMore.disabled = submitting;
     explanationFields.querySelectorAll("textarea, select, button").forEach((item) => {
       item.disabled = submitting || !readMore.checked;
@@ -192,8 +207,49 @@ const renderBlueskyDraft = (() => {
   }
 
   input.addEventListener("input", renderPreview);
-  myth.addEventListener("input", renderPreview);
-  clarification.addEventListener("input", renderPreview);
+  visualEditor.addEventListener("input", renderPreview);
+  photoInput.addEventListener("change", async () => {
+    if (!active) return;
+    const current = active;
+    const file = photoInput.files[0];
+    const selection = Symbol();
+    current.photoSelection = selection;
+    current.photo = null;
+    current.photoError = "";
+    current.photoLoading = Boolean(file);
+    current.cardKey = null;
+    photoAlt.value = "";
+    renderPreview();
+    if (!file) return;
+
+    let objectUrl;
+    try {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 12_000_000) {
+        throw new Error("Choose a JPEG, PNG, or WebP photo no larger than 12 MB.");
+      }
+      objectUrl = URL.createObjectURL(file);
+      const photo = new Image();
+      photo.src = objectUrl;
+      try {
+        await photo.decode();
+      } catch {
+        throw new Error("The photo could not be opened. Choose another image.");
+      }
+      if (active === current && current.photoSelection === selection) current.photo = photo;
+    } catch (error) {
+      if (current.photoSelection === selection) current.photoError = error.message;
+    } finally {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (active === current && current.photoSelection === selection) {
+        current.photoLoading = false;
+        renderPreview();
+      }
+    }
+  });
+  removePhoto.addEventListener("click", () => {
+    photoInput.value = "";
+    photoInput.dispatchEvent(new Event("change"));
+  });
   sources.addEventListener("change", renderPreview);
   explanationFields.addEventListener("input", renderPreview);
   explanationFields.addEventListener("change", renderPreview);
@@ -255,8 +311,9 @@ const renderBlueskyDraft = (() => {
     };
     active = current;
     input.value = "";
-    myth.value = "";
-    clarification.value = "";
+    visualFields.forEach((field) => { field.value = ""; });
+    photoInput.value = "";
+    photoAlt.value = "";
     setSources(draft.research.sources);
     readMore.checked = true;
     explanationFields.replaceChildren();

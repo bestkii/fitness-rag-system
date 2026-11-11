@@ -59,11 +59,25 @@
                   <textarea id="blueskyText" maxlength="600" rows="4" placeholder="Write the takeaway and its main limitation."></textarea>
                   <fieldset id="blueskySources"><legend>Research links to include</legend></fieldset>
                   <fieldset id="blueskyCardEditor">
-                    <legend>Myth and clarification</legend>
-                    <label for="blueskyMyth">What might readers misunderstand?</label>
-                    <textarea id="blueskyMyth" maxlength="140" rows="2" placeholder="“Two reps in reserve” means I had exactly two reps left."></textarea>
-                    <label for="blueskyClarification">What does the evidence clarify?</label>
-                    <textarea id="blueskyClarification" maxlength="180" rows="2" placeholder="Reps in reserve estimates effort. Its accuracy varies from set to set."></textarea>
+                    <legend>Visual example</legend>
+                    <p>Show a worked example that helps explain the post. Use short labels and include units where they matter.</p>
+                    <label for="visualHeading">Image headline</label>
+                    <input id="visualHeading" data-visual-text maxlength="70" placeholder="How many reps left?">
+                    <div class="visual-example-row">
+                      <label>First value <input data-visual-text maxlength="14" placeholder="8"></label>
+                      <label>First label <input data-visual-text maxlength="44" placeholder="Reps completed"></label>
+                    </div>
+                    <div class="visual-example-row">
+                      <label>Second value <input data-visual-text maxlength="14" placeholder="2"></label>
+                      <label>Second label <input data-visual-text maxlength="44" placeholder="Reps estimated"></label>
+                    </div>
+                    <label for="visualPhoto">Supporting photo (optional)</label>
+                    <input id="visualPhoto" type="file" accept="image/jpeg,image/png,image/webp">
+                    <button id="removeVisualPhoto" type="button" hidden>Remove photo</button>
+                    <div id="visualPhotoDescription" hidden>
+                      <label for="visualPhotoAlt">Photo description</label>
+                      <input id="visualPhotoAlt" maxlength="140" placeholder="A lifter resting on a gym bench after a set.">
+                    </div>
                   </fieldset>
                   <fieldset id="blueskyExplanationEditor">
                     <legend>Detailed explanation</legend>
