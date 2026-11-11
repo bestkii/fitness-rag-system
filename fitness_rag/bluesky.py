@@ -21,6 +21,8 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 SERVICE = "https://bsky.social"
 COLLECTION = "app.bsky.feed.post"
 MAX_POST_LENGTH = 300
+MAX_EXPLANATION_REPLIES = 5
+READ_MORE = "Read more ↓"
 MAX_CARD_BYTES = 1_000_000
 CARD_PALETTES = ("red", "gold", "blue")
 TID_ALPHABET = "234567abcdefghijklmnopqrstuvwxyz"
@@ -210,6 +212,25 @@ def compose_post(draft: dict, text: str, sources: list[int]) -> dict:
     return {"$type": COLLECTION, "text": text, "langs": ["en"], "facets": facets}
 
 
+def _with_read_more(record: dict, permalink: str) -> dict:
+    text = record["text"] + "\n" + READ_MORE
+    if len(text) > MAX_POST_LENGTH:
+        raise PublishError(422, "Leave room for the Read more link within the 300-character post.")
+    start = len((record["text"] + "\n").encode())
+    return {
+        **record,
+        "text": text,
+        "facets": record["facets"] + [{
+            "index": {"byteStart": start, "byteEnd": len(text.encode())},
+            "features": [{"$type": "app.bsky.richtext.facet#link", "uri": permalink}],
+        }],
+    }
+
+
+def _thread_complete(row: dict) -> bool:
+    return bool(row["uri"]) and all(reply["uri"] for reply in row["replies"])
+
+
 @dataclass(frozen=True)
 class PostCard:
     jpeg: bytes
@@ -269,12 +290,26 @@ class PublicationStore:
                 palette TEXT NOT NULL
             )
         """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS bluesky_replies (
+                draft_id TEXT NOT NULL,
+                ordinal INTEGER NOT NULL,
+                record_key TEXT NOT NULL,
+                record TEXT NOT NULL,
+                uri TEXT,
+                cid TEXT,
+                PRIMARY KEY (draft_id, ordinal)
+            )
+        """)
         return connection
 
     def get(self, draft_id: str) -> dict | None:
         with closing(self._connect()) as connection:
             row = connection.execute(PUBLICATION_QUERY, (draft_id,)).fetchone()
-        return dict(row) if row else None
+            replies = connection.execute(
+                "SELECT * FROM bluesky_replies WHERE draft_id = ? ORDER BY ordinal", (draft_id,)
+            ).fetchall()
+        return {**dict(row), "replies": [dict(reply) for reply in replies]} if row else None
 
     @staticmethod
     def _next_palette(connection: sqlite3.Connection) -> str:
@@ -286,7 +321,8 @@ class PublicationStore:
             return self._next_palette(connection)
 
     def reserve(
-        self, draft_id: str, did: str, account: str, record: dict, card: PostCard | None
+        self, draft_id: str, did: str, account: str, record: dict,
+        card: PostCard | None, replies: list[dict],
     ) -> dict:
         with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
@@ -295,6 +331,11 @@ class PublicationStore:
                 if card is not None and card.palette != self._next_palette(connection):
                     raise PublishError(409, "The next palette changed. Review the updated preview before publishing.")
                 key = _record_key()
+                reply_keys = [_record_key() for _ in replies]
+                if replies:
+                    record = _with_read_more(
+                        record, f"https://bsky.app/profile/{did}/post/{reply_keys[0]}"
+                    )
                 serialized = json.dumps({
                     **record,
                     "createdAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -309,8 +350,42 @@ class PublicationStore:
                         "INSERT INTO bluesky_cards (draft_id, jpeg, alt, palette) VALUES (?, ?, ?, ?)",
                         (draft_id, card.jpeg, card.alt, card.palette),
                     )
-                row = connection.execute(PUBLICATION_QUERY, (draft_id,)).fetchone()
-        return dict(row)
+                for ordinal, (reply, reply_key) in enumerate(zip(replies, reply_keys), 1):
+                    saved = {
+                        **reply,
+                        "createdAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+                    }
+                    connection.execute(
+                        """INSERT INTO bluesky_replies (draft_id, ordinal, record_key, record)
+                        VALUES (?, ?, ?, ?)""",
+                        (draft_id, ordinal, reply_key, json.dumps(saved)),
+                    )
+        return self.get(draft_id)
+
+    def prepare_reply(self, draft_id: str, ordinal: int, root: dict, parent: dict) -> dict:
+        with closing(self._connect()) as connection, connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                "SELECT record FROM bluesky_replies WHERE draft_id = ? AND ordinal = ?",
+                (draft_id, ordinal),
+            ).fetchone()
+            record = json.loads(row["record"])
+            refs = {"root": root, "parent": parent}
+            if "reply" in record and record["reply"] != refs:
+                raise PublishError(409, "The explanation reply belongs to a different thread.")
+            record["reply"] = refs
+            connection.execute(
+                "UPDATE bluesky_replies SET record = ? WHERE draft_id = ? AND ordinal = ?",
+                (json.dumps(record), draft_id, ordinal),
+            )
+        return record
+
+    def confirm_reply(self, draft_id: str, ordinal: int, receipt: dict) -> None:
+        with closing(self._connect()) as connection, connection:
+            connection.execute(
+                "UPDATE bluesky_replies SET uri = ?, cid = ? WHERE draft_id = ? AND ordinal = ?",
+                (receipt["uri"], receipt["cid"], draft_id, ordinal),
+            )
 
     def save_card_embed(self, draft_id: str, embed: dict) -> dict:
         with closing(self._connect()) as connection, connection:
@@ -341,7 +416,15 @@ def publication_status(row: dict | None) -> dict:
         status.update(
             account=row["account"],
             record=json.loads(row["record"]),
-            state="published" if row["uri"] else "pending",
+            state="published" if _thread_complete(row) else "pending",
+            replies=[{
+                "record": json.loads(reply["record"]),
+                "state": "published" if reply["uri"] else "pending",
+                "permalink": (
+                    f"https://bsky.app/profile/{row['did']}/post/{reply['record_key']}"
+                    if reply["uri"] else None
+                ),
+            } for reply in row["replies"]],
         )
         card = _saved_card(row)
         if card is not None:
@@ -359,15 +442,45 @@ def publication_status(row: dict | None) -> dict:
     return status
 
 
+def _write_record(client: BlueskyClient, key: str, record: dict, receipt: dict | None) -> dict:
+    if receipt is None:
+        try:
+            receipt = client.create(key, record)
+        except BlueskyRequestError:
+            receipt = client.get(key)
+            if receipt is None:
+                raise
+    if "value" in receipt and receipt["value"] != record:
+        raise PublishError(409, "The Bluesky record differs from the reviewed post.")
+    expected_uri = f"at://{client.did}/{COLLECTION}/{key}"
+    if receipt.get("uri") != expected_uri or not isinstance(receipt.get("cid"), str) or not receipt["cid"]:
+        raise BlueskyRequestError()
+    return receipt
+
+
+def _publish_replies(store: PublicationStore, row: dict, client: BlueskyClient) -> dict:
+    root = {"uri": row["uri"], "cid": row["cid"]}
+    parent = root
+    for reply in row["replies"]:
+        if reply["uri"]:
+            parent = {"uri": reply["uri"], "cid": reply["cid"]}
+            continue
+        record = store.prepare_reply(row["draft_id"], reply["ordinal"], root, parent)
+        receipt = _write_record(client, reply["record_key"], record, client.get(reply["record_key"]))
+        store.confirm_reply(row["draft_id"], reply["ordinal"], receipt)
+        parent = {"uri": receipt["uri"], "cid": receipt["cid"]}
+    return publication_status(store.get(row["draft_id"]))
+
+
 def publish_draft(
     store: PublicationStore, draft: dict, account: str, text: str | None,
-    sources: list[int], card: PostCard | None = None,
+    sources: list[int], card: PostCard | None = None, explanations: list[dict] | None = None,
 ) -> dict:
     if draft.get("language") != "en" or draft.get("status") != "approved":
         raise PublishError(409, "Approve an English draft before publishing.")
     draft_id = draft["id"]
     previous = store.get(draft_id)
-    if previous and previous["uri"]:
+    if previous and _thread_complete(previous):
         return publication_status(previous)
     configured = configured_account()
     if not configured:
@@ -377,20 +490,34 @@ def publish_draft(
     if text is None and previous:
         requested = json.loads(previous["record"])
         card = _saved_card(previous)
+        replies = [json.loads(reply["record"]) for reply in previous["replies"]]
     else:
         requested = compose_post(draft, text or "", sources)
+        explanations = explanations or []
+        if len(explanations) > MAX_EXPLANATION_REPLIES:
+            raise PublishError(422, "Use up to five explanation replies.")
+        replies = [compose_post(draft, item["text"], item["sources"]) for item in explanations]
     client = BlueskyClient(configured, os.environ["BLUESKY_APP_PASSWORD"])
-    row = store.reserve(draft_id, client.did, configured, requested, card)
+    row = store.reserve(draft_id, client.did, configured, requested, card, replies)
     if row["did"] != client.did:
         raise PublishError(409, "This publishing attempt belongs to a different Bluesky account.")
-    if row["uri"]:
-        return publication_status(row)
     record = json.loads(row["record"])
+    if text is not None and row["replies"]:
+        requested = _with_read_more(
+            requested, f"https://bsky.app/profile/{client.did}/post/{row['replies'][0]['record_key']}"
+        )
     if (
         any(record.get(field) != value for field, value in requested.items())
         or _saved_card(row) != card
+        or len(replies) != len(row["replies"])
+        or any(
+            any(json.loads(saved["record"]).get(field) != value for field, value in wanted.items())
+            for saved, wanted in zip(row["replies"], replies)
+        )
     ):
         raise PublishError(409, "A post is pending. Retry the same reviewed preview.")
+    if row["uri"]:
+        return _publish_replies(store, row, client)
 
     key = row["record_key"]
     receipt = client.get(key)
@@ -401,19 +528,9 @@ def publish_draft(
                 "$type": "app.bsky.embed.images",
                 "images": [{"image": blob, "alt": card.alt}],
             })
-        try:
-            receipt = client.create(key, record)
-        except BlueskyRequestError:
-            receipt = client.get(key)
-            if receipt is None:
-                raise
     elif card is not None and "embed" not in record:
         record = json.loads(store.get(draft_id)["record"])
-    if "value" in receipt and receipt["value"] != record:
-        raise PublishError(409, "The Bluesky record differs from the reviewed post.")
-    expected_uri = f"at://{client.did}/{COLLECTION}/{key}"
-    cid = receipt.get("cid")
-    if receipt.get("uri") != expected_uri or not isinstance(cid, str) or not cid:
-        raise BlueskyRequestError()
+    receipt = _write_record(client, key, record, receipt)
     permalink = f"https://bsky.app/profile/{client.did}/post/{key}"
-    return publication_status(store.confirm(draft_id, expected_uri, cid, permalink))
+    row = store.confirm(draft_id, receipt["uri"], receipt["cid"], permalink)
+    return _publish_replies(store, row, client)

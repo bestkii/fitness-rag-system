@@ -186,6 +186,13 @@ class ContentAgent:
                 {"heading": "What can we conclude?", "copy": "Compare the original sources before writing a practical takeaway."},
                 {"heading": "Sources and limitations", "copy": "Review the linked studies and document any uncertainty."},
             ],
+            "explanation": [
+                {
+                    "text": f"Research excerpt to review: {_compact(source.snippet, 220)}",
+                    "sources": [index],
+                }
+                for index, source in enumerate(packet.sources[:3], 1)
+            ],
             "audience_note": _compact(audience, 120),
             "tone_note": _compact(tone, 120),
         }
@@ -211,12 +218,21 @@ class ContentAgent:
             "Never turn the synthetic legacy RAG context into a citation or authoritative claim.\n\n"
             f"Synthetic legacy RAG context (orientation only):\n{json.dumps(legacy_context, ensure_ascii=False)}"
         )
+        explanation_schema = (
+            "\nAlso return explanation, an array of 3 to 5 objects with text (up to 240 characters) "
+            "and sources (an array of source numbers, such as [1]). These will be replies below "
+            "the short post. Explain the concept, the study methods and findings, the practical "
+            "interpretation, and important limitations. Ground each reply in the supplied sources. "
+            "Distinguish an excerpt, a measured result, and your interpretation. "
+            "Do not claim to have read books or full papers that are absent from the evidence."
+            if english else ""
+        )
         prompt = f"""
 Create {assignment} about: {packet.topic}
 Audience: {audience}
 Tone: {tone}
 
-Use only the web excerpts below for factual claims. Every factual paragraph must include
+Use only the web excerpts below for factual claims. Every factual paragraph in body must include
 one or more source markers such as [S1]. Do not treat search snippets as complete papers;
 state uncertainty and ask the reviewer to open the original URLs.
 
@@ -228,6 +244,7 @@ Web evidence:
 Return JSON with exactly these fields:
 title (string, <= {title_limit} characters), body (string), hashtags (array of 3-6 strings),
 carousel (array of exactly 5 objects with string fields heading and copy).
+{explanation_schema}
 Write every field in {editor_language}.
 Avoid medical diagnosis, guaranteed outcomes, fear-based language, and invented statistics.
 """
@@ -250,6 +267,23 @@ Avoid medical diagnosis, guaranteed outcomes, fear-based language, and invented 
             raise ValueError("Content model returned an incomplete draft.")
         if not isinstance(payload["carousel"], list) or len(payload["carousel"]) != 5:
             raise ValueError("Content model must return exactly five carousel cards.")
+        explanation = []
+        if english:
+            explanation = payload.get("explanation")
+            if not isinstance(explanation, list) or not 3 <= len(explanation) <= 5:
+                raise ValueError("Content model must return three to five explanation replies.")
+            for item in explanation:
+                if (
+                    not isinstance(item, dict)
+                    or not isinstance(item.get("text"), str)
+                    or not item["text"].strip()
+                    or len(item["text"]) > 240
+                    or not isinstance(item.get("sources"), list)
+                    or not item["sources"]
+                    or any(type(index) is not int or not 1 <= index <= len(packet.sources) for index in item["sources"])
+                    or len(set(item["sources"])) != len(item["sources"])
+                ):
+                    raise ValueError("Each explanation reply needs short text and valid source numbers.")
         return {
             "title": _compact(str(payload["title"]), title_limit),
             "body": str(payload["body"]).strip(),
@@ -266,4 +300,5 @@ Avoid medical diagnosis, guaranteed outcomes, fear-based language, and invented 
             ],
             "audience_note": _compact(audience, 120),
             "tone_note": _compact(tone, 120),
+            **({"explanation": explanation} if english else {}),
         }

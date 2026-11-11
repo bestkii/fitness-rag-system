@@ -224,6 +224,74 @@ class BlueskyPostTests(unittest.TestCase):
             with self.subTest(palette=palette, length=len(data)), self.assertRaises(PublishError):
                 PostCard.decode(data, alt, palette)
 
+    def test_read_more_links_to_first_reply_and_the_explanations_form_a_thread(self):
+        explanations = [
+            {"text": "The study measured predicted and actual repetitions remaining.", "sources": [1]},
+            {"text": "The average error describes the pooled sample. Individual sets vary.", "sources": [1]},
+        ]
+        result = publish_draft(self.store, DRAFT, ACCOUNT, POST_TEXT, [1], explanations=explanations)
+        self.assertEqual(result["state"], "published")
+        self.assertEqual(len(result["replies"]), 2)
+        self.assertTrue(result["record"]["text"].endswith("\nRead more ↓"))
+        root_call, first_call, second_call = self.client.create.call_args_list
+        root_key, root_record = root_call.args
+        first_key, first_record = first_call.args
+        second_record = second_call.args[1]
+        root_ref = self.create_receipt(root_key, root_record)
+        root_ref = {"uri": root_ref["uri"], "cid": root_ref["cid"]}
+        self.assertEqual(first_record["reply"], {"root": root_ref, "parent": root_ref})
+        self.assertEqual(second_record["reply"]["root"], root_ref)
+        self.assertEqual(
+            second_record["reply"]["parent"]["uri"], self.create_receipt(first_key, first_record)["uri"]
+        )
+        facet = root_record["facets"][-1]
+        encoded = root_record["text"].encode()
+        self.assertEqual(encoded[facet["index"]["byteStart"]:facet["index"]["byteEnd"]].decode(), "Read more ↓")
+        self.assertEqual(facet["features"][0]["uri"], result["replies"][0]["permalink"])
+        self.assertEqual(publication_status(self.store.get(DRAFT["id"])), result)
+        publish_draft(self.store, DRAFT, ACCOUNT, None, [])
+        self.assertEqual(self.client.create.call_count, 3)
+
+    def test_interrupted_thread_resumes_the_saved_reply_without_reposting_the_root(self):
+        attempts = []
+
+        def interrupted(key, record):
+            attempts.append(key)
+            if len(attempts) == 3:
+                raise BlueskyRequestError()
+            return self.create_receipt(key, record)
+
+        explanations = [
+            {"text": "The method compared predicted and actual repetitions.", "sources": [1]},
+            {"text": "Estimates varied between study conditions.", "sources": [1]},
+        ]
+        self.client.create.side_effect = interrupted
+        with self.assertRaises(BlueskyRequestError):
+            publish_draft(self.store, DRAFT, ACCOUNT, POST_TEXT, [1], explanations=explanations)
+        pending = publication_status(self.store.get(DRAFT["id"]))
+        self.assertEqual(pending["state"], "pending")
+        self.assertTrue(pending["permalink"])
+        self.assertEqual([reply["state"] for reply in pending["replies"]], ["published", "pending"])
+        with self.assertRaisesRegex(PublishError, "same reviewed preview"):
+            publish_draft(self.store, DRAFT, ACCOUNT, "Changed post", [1], explanations=explanations)
+        result = publish_draft(self.store, DRAFT, ACCOUNT, None, [])
+        self.assertEqual(result["state"], "published")
+        self.assertEqual(len(attempts), 4)
+        self.assertEqual(attempts[2], attempts[3])
+        self.assertNotIn(attempts[0], attempts[1:])
+
+    def test_invalid_explanations_and_read_more_overflow_do_not_reserve_a_post(self):
+        for text, explanation in (
+            (POST_TEXT, [{"text": "A finding", "sources": []}]),
+            (POST_TEXT, [{"text": "x" * 300, "sources": [1]}]),
+            (POST_TEXT, [{"text": "A finding", "sources": [1]}] * 6),
+            ("a" * 280, [{"text": "A finding", "sources": [1]}]),
+        ):
+            with self.subTest(length=len(text)), self.assertRaises(PublishError):
+                publish_draft(self.store, DRAFT, ACCOUNT, text, [1], explanations=explanation)
+            self.assertIsNone(self.store.get(DRAFT["id"]))
+        self.client.create.assert_not_called()
+
 
 class BlueskyTransportTests(unittest.TestCase):
     def test_hosted_account_writes_to_the_pds_with_the_saved_key(self):

@@ -60,12 +60,25 @@ Check the exact text, card, and destination account. **Publish with image**
 uploads the previewed JPEG and publishes it with the post and clickable research
 links in one action. Text export is also available.
 
+**Include a Read more thread** is enabled for new previews. Review the editable
+explanation replies and their citations below the image editor. The first post
+links directly to the first reply. The replies can explain the concept, study
+methods, findings, practical interpretation, and limitations. Each reply must
+fit the platform's post limit including its source labels.
+
+With a content-model key, new English drafts include three to five source-linked
+explanation drafts. Template mode starts with clearly labelled research excerpts
+for editing and original-source review. Older drafts can have explanations added
+in the preview. The workbench uses the supplied research packet for this feature.
+
 The workbench saves the draft link in the browser address bar. Open that link
 again to see the publishing status or public permalink. If Bluesky does not
 confirm the first request, retry the saved preview. The app checks the original
 record key before retrying the write and reuses the saved card. Publishing
 receipts and reviewed card images are stored in the ignored local
 `runtime/bluesky_publications.sqlite3` database.
+If a reply fails after the myth post is published, retry the saved thread to
+finish the remaining replies. Each reply keeps its original record key.
 
 ## Read-only Xiaohongshu trend collector
 

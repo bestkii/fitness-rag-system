@@ -65,10 +65,21 @@
                     <label for="blueskyClarification">What does the evidence clarify?</label>
                     <textarea id="blueskyClarification" maxlength="180" rows="2" placeholder="Reps in reserve estimates effort. Its accuracy varies from set to set."></textarea>
                   </fieldset>
+                  <fieldset id="blueskyExplanationEditor">
+                    <legend>Detailed explanation</legend>
+                    <label><input type="checkbox" id="blueskyReadMore" checked> Include a Read more thread</label>
+                    <p>Explain the concept, what the research measured, what it found, and its limitations. Each reply links to a source you have checked.</p>
+                    <div id="blueskyExplanationFields"></div>
+                    <button type="button" id="addBlueskyExplanation">Add explanation reply</button>
+                  </fieldset>
                 </div>
                 <p id="blueskyPreviewLabel">Public post preview</p>
                 <pre id="blueskyPreview" aria-labelledby="blueskyPreviewLabel"></pre>
                 <p id="blueskyCount" class="form-note"></p>
+                <section id="blueskyExplanationPreview" aria-labelledby="blueskyExplanationHeading" hidden>
+                  <h4 id="blueskyExplanationHeading">Below the myth post</h4>
+                  <ol id="blueskyExplanationPosts"></ol>
+                </section>
                 <figure id="blueskyCardFigure" hidden>
                   <img id="blueskyCardPreview" width="960" height="960" alt="">
                   <figcaption id="blueskyCardPalette"></figcaption>
