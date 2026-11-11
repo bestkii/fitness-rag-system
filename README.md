@@ -52,9 +52,11 @@ python -m uvicorn app:app --host 127.0.0.1 --port 8010
 
 Open the English workbench, generate a draft, and verify the original sources
 before approving it. Write the post, select at least one research link, and
-enter the misconception and its evidence-backed clarification. The browser
-renders a square JPEG and derives alternative text as you type. New cards use
-red and black, gold and black, then blue and black in rotation.
+enter a short headline and two labelled values for a worked visual example.
+Add units where needed. An optional JPEG, PNG, or WebP photo provides context.
+Describe the photo for screen readers when you include one. The browser renders
+a square JPEG and derives alternative text from the example as you type. New
+cards use red and black, gold and black, then blue and black in rotation.
 
 Check the exact text, card, and destination account. **Publish with image**
 uploads the previewed JPEG and publishes it with the post and clickable research

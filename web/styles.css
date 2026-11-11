@@ -163,6 +163,11 @@ code { color: var(--blue); font-family: var(--mono); }
 .bluesky-panel figure { margin: 16px 0; max-width: 480px; }
 .bluesky-panel figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; }
 .bluesky-panel figcaption { color: var(--muted); margin-top: 6px; }
+#blueskyCardEditor input:not([type="file"]) { width: 100%; min-width: 0; padding: 8px; }
+#blueskyCardEditor .visual-example-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 12px; }
+#blueskyCardEditor .visual-example-row label { display: block; }
+#blueskyCardEditor .visual-example-row input { margin-top: 4px; }
+#removeVisualPhoto { margin: 8px 0; }
 #blueskyExplanationFields select { display: block; width: 100%; margin-bottom: 12px; }
 #blueskyExplanationFields fieldset { min-width: 0; }
 #blueskyExplanationPosts { padding-left: 22px; }
